@@ -7,6 +7,8 @@
 .piano-wrap::-webkit-scrollbar-thumb{background:#383647;border-radius:4px}
 .piano-wrap::-webkit-scrollbar-thumb:hover{background:#5c5870}
 .note.playing{filter:brightness(1.4) drop-shadow(0 0 6px #ffa5e0)!important}
+.piano-wrap{overflow-y:auto;overflow-x:hidden;position:relative;min-height:0;scrollbar-width:thin;scrollbar-color:#3d3b4a transparent}
+.piano-wrap::-webkit-scrollbar{display:block;width:5px;height:5px}
 .keyboard{height:592px!important;flex-shrink:0}
 .grid{height:592px!important;cursor:crosshair}
 .note{position:absolute;height:13px;border:0;border-radius:3px;background:linear-gradient(90deg,#a97fee,#e281bf);box-shadow:0 0 10px #b278d544;display:flex;align-items:center;justify-content:space-between;padding:0;overflow:hidden;user-select:none;cursor:pointer}
@@ -671,4 +673,252 @@
   color: #8c899c;
 }
 
+/* Drum Lane Mix Controls */
+.lane-mix-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 68px;
+}
+.lane-mix-controls label {
+  font: 8px 'DM Mono', monospace;
+  color: #838092;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.mini-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 42px;
+  height: 4px;
+  border-radius: 2px;
+  background: #2b2b3b;
+  outline: none;
+  cursor: pointer;
+}
+.mini-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #bb86fc;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+.mini-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+  background: #e1a9ff;
+}
 
+/* Drum Roll & Ratchet Badges */
+.drum-lanes .step {
+  position: relative;
+}
+.roll-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font: 7px 'DM Mono', monospace;
+  font-weight: 800;
+  color: #120c1d;
+  background: #ffd166;
+  border-radius: 2px;
+  padding: 0 2px;
+  line-height: 1.1;
+  pointer-events: none;
+  box-shadow: 0 0 4px rgba(255, 209, 102, 0.6);
+}
+
+/* Tap Tempo Button */
+.tap-tempo-btn {
+  border: 1px solid #4a3e5c;
+  border-radius: 5px;
+  background: #231e30;
+  color: #d1b4ee;
+  font: 9px 'DM Mono', monospace;
+  font-weight: 700;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  user-select: none;
+}
+.tap-tempo-btn:hover {
+  border-color: #a87fe0;
+  background: #36294c;
+  color: #fff;
+}
+.tap-tempo-btn:active {
+  transform: scale(0.94);
+  background: #d17dc0;
+  color: #1a0e28;
+}
+
+/* Master Limiter & Kick Sidechain Ducking */
+.mastering-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 14px 0;
+}
+@media (max-width: 640px) {
+  .mastering-row {
+    grid-template-columns: 1fr;
+  }
+}
+.master-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 9px;
+  border: 1px solid #363445;
+  background: #191a25;
+  color: #a7a3b3;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.18s ease;
+}
+.master-btn:hover {
+  border-color: #7b59a8;
+  background: #222033;
+}
+.master-btn.on {
+  border-color: #cf84e7;
+  background: #2a1b3a;
+  color: #fce7ff;
+  box-shadow: 0 0 16px rgba(207, 132, 231, 0.18);
+}
+.master-led {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4a4757;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+}
+.master-btn.on .master-led {
+  background: #e886ff;
+  box-shadow: 0 0 10px #e886ff, 0 0 2px #fff;
+}
+.master-btn-text strong {
+  display: block;
+  font: 11px 'DM Mono', monospace;
+  letter-spacing: 0.05em;
+  color: #e5e2eb;
+}
+.master-btn.on .master-btn-text strong {
+  color: #fff;
+}
+.master-btn-text small {
+  display: block;
+  font-size: 10px;
+  color: #8c889a;
+  margin-top: 2px;
+}
+.master-btn.on .master-btn-text small {
+  color: #d1b4ec;
+}
+
+/* 3-Band EQ Grid & Reset Button */
+.reset-eq-btn {
+  border: 1px solid #443e54;
+  border-radius: 4px;
+  background: #221f2d;
+  color: #baa8ce;
+  font: 9px 'DM Mono', monospace;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.reset-eq-btn:hover {
+  border-color: #a47fe0;
+  background: #312845;
+  color: #fff;
+}
+.eq-grid {
+  grid-template-columns: repeat(3, 1fr) !important;
+}
+@media (max-width: 640px) {
+  .eq-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* QWERTY Indicator */
+.qwerty-indicator {
+  font: 10px 'DM Mono', monospace;
+  color: #9f9bb0;
+  background: #201f2e;
+  border: 1px solid #363445;
+  border-radius: 5px;
+  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  transition: all 0.15s;
+}
+.qwerty-indicator.active {
+  border-color: #00e5ff;
+  background: #112836;
+  color: #80f2ff;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.35);
+}
+.key.qwerty-hit {
+  background: linear-gradient(135deg, #00f2fe, #4facfe) !important;
+  box-shadow: 0 0 12px #00f2fe !important;
+}
+
+/* Vocal Waveform Display */
+.waveform-box {
+  width: 100%;
+  max-width: 480px;
+  height: 64px;
+  background: #14141e;
+  border: 1px solid #2d2a3d;
+  border-radius: 6px;
+  margin: 10px 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.waveform-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Public Sound Sources Modal */
+.source-card {
+  border: 1px solid #363445;
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #1c1d29;
+  transition: border-color 0.15s;
+}
+.source-card:hover {
+  border-color: #8e6bbd;
+}
+.source-card h4 {
+  margin: 0 0 4px 0;
+  font-size: 13px;
+}
+.source-card h4 a {
+  color: #c787e9;
+  text-decoration: none;
+  font-weight: 700;
+}
+.source-card h4 a:hover {
+  text-decoration: underline;
+  color: #ff9ee4;
+}
+.source-card p {
+  margin: 0;
+  font-size: 11px;
+  color: #9d99ab;
+  line-height: 1.45;
+}
