@@ -1,0 +1,17 @@
+{
+  "name": "bmai-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "catalog": "node scripts/generate-sound-catalog.mjs",
+    "dev": "npm run catalog && vite",
+    "build": "npm run catalog && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "latest"
+  },
+  "dependencies": {
+    "tone": "^15.0.4"
+  }
+}
