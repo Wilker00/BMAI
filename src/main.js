@@ -202,7 +202,7 @@ const progressions = {
   ]
 };
 
-const kitNames = {rnb:'R&B', house:'House', trap:'Trap', dnb:'Drum & bass', acoustic:'Acoustic', dj:'DJ Set'};
+const kitNames = {rnb:'R&B', house:'House', trap:'Trap', dnb:'DnB', acoustic:'Acoustic', dj:'DJ'};
 const sessionKits = {
   rnb:{
     kick:'/sounds/0x808/909/kick-2.wav',
@@ -281,7 +281,8 @@ function loadProject(){try{return JSON.parse(localStorage.getItem('bmai-project'
 const saved = loadProject();
 
 const state = {
-  view: views.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home',
+  view: (saved?.id && views.includes(location.hash.slice(1))) ? location.hash.slice(1) : 'home',
+  committed: !!(saved?.id),
   id: saved?.id || crypto.randomUUID(),
   name: saved?.name || 'Untitled idea',
   description: saved?.description || '',
@@ -305,7 +306,10 @@ const state = {
   chordAdded: !!saved?.chordAdded,
   vocals: saved?.vocals || {title:'Soft hook',line:'keep the night close, don’t say it loud',chain:'Modern R&B'},
   vocalAdded: !!saved?.vocalAdded,
-  idea: 0,
+  idea: Number.isInteger(saved?.idea) ? saved.idea : 0,
+  melodyDrafts: Array.isArray(saved?.melodyDrafts) && saved.melodyDrafts.length === 4
+    ? saved.melodyDrafts.map(list => Array.isArray(list) ? list.map(note => ({...note})) : [])
+    : [[], [], [], []],
   instrument: saved?.instrument || 'rhodes',
   swing: saved?.swing !== undefined ? Number(saved.swing) : 18,
   mix: saved?.mix || defaultMix(),
@@ -329,6 +333,9 @@ const state = {
 };
 if (saved?.drums) {
   for (const lane of lanes) state.drums[lane] = new Set(saved.drums[lane] || []);
+}
+if (!state.melodyDrafts[state.idea]?.length && state.pattern.length) {
+  state.melodyDrafts[state.idea] = state.pattern.map(note => ({...note}));
 }
 
 const chordRoots = {
@@ -830,12 +837,13 @@ async function preloadKit(kitId){
 }
 
 async function prepareVocalBuffer(blobUrl){
-  if(!blobUrl){ vocalBuffer = null; return null; }
+  if(!blobUrl){ vocalBuffer = null; drawVocalWaveform(); return null; }
   try{
     audioContext ||= new AudioContext();
     const res = await fetch(publicUrl(blobUrl));
     const arr = await res.arrayBuffer();
     vocalBuffer = await audioContext.decodeAudioData(arr);
+    drawVocalWaveform();
     return vocalBuffer;
   }catch{
     return null;
@@ -887,8 +895,11 @@ let groupId = 'picks';
 let query = '';
 let previewAudio = null;
 let recorder = null;
-let vocalUrl = '';
+let vocalUrl = state.vocals?.url || '';
 let vocalChunks = [];
+if (vocalUrl) {
+  prepareVocalBuffer(vocalUrl);
+}
 
 function noteFrequency(note){const match=note.match(/([A-G])(#?)(\d)/);const pitch={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[match[1]]+(match[2]?1:0)+(Number(match[3])+1)*12;return 440*2**((pitch-69)/12)}
 const soundfontCache = {};
@@ -1355,7 +1366,6 @@ function playVocalOnce(){
       lp.type = 'lowpass';
       lp.frequency.value = 3800;
       source.connect(hp).connect(lp).connect(gain).connect(initMasterChain() || audioContext.destination);
-      source.connect(hp).connect(lp).connect(gain).connect(audioContext.destination);
     } else if(chain === 'Dark rap'){
       source.playbackRate.value = 0.97;
       const lp = audioContext.createBiquadFilter();
@@ -1366,7 +1376,6 @@ function playVocalOnce(){
       boost.frequency.value = 220;
       boost.gain.value = 4;
       source.connect(boost).connect(lp).connect(gain).connect(initMasterChain() || audioContext.destination);
-      source.connect(boost).connect(lp).connect(gain).connect(audioContext.destination);
     } else {
       // Modern R&B: subtle air boost + stereo space
       const hp = audioContext.createBiquadFilter();
@@ -1390,7 +1399,6 @@ function playVocalOnce(){
       delay.connect(delayFeedback).connect(delay);
       delay.connect(delayGain).connect(gain);
       gain.connect(initMasterChain() || audioContext.destination);
-      gain.connect(audioContext.destination);
     }
     source.start();
   } else {
@@ -1433,11 +1441,21 @@ function isTrackActive(trackId){
   const currentSec = state.sections[state.songSection] || state.sections[0];
   return currentSec?.active?.[trackId] !== false;
 }
+function partAudible(part){
+  if(part==='keys') return !!(state.melodyAdded || state.view==='melody');
+  if(part==='drums') return !!(state.drumsAdded || state.view==='drums');
+  if(part==='chords') return !!(state.chordAdded || state.view==='chords');
+  if(part==='vocals') return !!(state.vocalAdded || (state.view==='vocals' && (vocalUrl || vocalBuffer)));
+  return false;
+}
+function projectHasMusic(){
+  return !!(state.melodyAdded || state.drumsAdded || state.chordAdded || state.vocalAdded);
+}
 function playDrumStep(step){
-  const activeDrums = isTrackActive('drums');
-  const activeKeys = isTrackActive('keys');
-  const activeChords = isTrackActive('chords');
-  const activeVocals = isTrackActive('vocals');
+  const activeDrums = isTrackActive('drums') && partAudible('drums');
+  const activeKeys = isTrackActive('keys') && partAudible('keys');
+  const activeChords = isTrackActive('chords') && partAudible('chords');
+  const activeVocals = isTrackActive('vocals') && partAudible('vocals');
 
   if(activeDrums && mixVol('drums')){
     for(const name of lanes){
@@ -1468,13 +1486,13 @@ function playDrumStep(step){
     });
   }
 
-  if(activeChords && state.chordAdded && mixVol('chords') && step % 4 === 0){
+  if(activeChords && mixVol('chords') && step % 4 === 0){
     const chord = currentChord();
     const tones = chordTones[chord] || getChordNotes(chord);
     tones.forEach(note => tone(note, .78, .045 * mixVol('chords'), state.instrument === 'pluck' ? 'rhodes' : state.instrument, true));
   }
 
-  if(activeVocals && state.vocalAdded && step === 0) playVocalOnce();
+  if(activeVocals && step === 0) playVocalOnce();
   if(metronomeOn && step % 4 === 0) tone(step === 0 ? 'C6' : 'C5', .05, .035, 'pluck');
 }
 
@@ -1490,6 +1508,7 @@ function projectSnapshot(){
     chips: state.chips,
     pattern: state.pattern,
     idea: state.idea,
+    melodyDrafts: (state.melodyDrafts || [[],[],[],[]]).map(list => (list || []).map(note => ({...note}))),
     instrument: state.instrument,
     swing: state.swing,
     kit: state.kit,
@@ -1530,6 +1549,7 @@ function writeProjects(list){
 }
 
 function saveProject(){
+  if(!state.committed) return;
   const snapshot = projectSnapshot();
   localStorage.setItem('bmai-project', JSON.stringify(snapshot));
   const list = loadProjects();
@@ -1582,8 +1602,17 @@ function applySnapshot(project){
   state.chordAdded = !!project.chordAdded;
   state.vocals = project.vocals || { title: 'Soft hook', line: 'keep the night close, don’t say it loud', chain: 'Modern R&B' };
   state.vocalAdded = !!project.vocalAdded;
+  if(vocalUrl && vocalUrl.startsWith('blob:') && vocalUrl !== state.vocals?.url) URL.revokeObjectURL(vocalUrl);
+  vocalUrl = state.vocals?.url || '';
+  if(vocalUrl) prepareVocalBuffer(vocalUrl);
   state.mix = project.mix || defaultMix();
   state.melodyAdded = !!project.melodyAdded;
+  state.idea = Number.isInteger(project.idea) ? project.idea : 0;
+  state.melodyDrafts = Array.isArray(project.melodyDrafts) && project.melodyDrafts.length === 4
+    ? project.melodyDrafts.map(list => Array.isArray(list) ? list.map(note => ({...note})) : [])
+    : [[], [], [], []];
+  if(!state.melodyDrafts[state.idea]?.length && state.pattern.length) state.melodyDrafts[state.idea] = state.pattern.map(note => ({...note}));
+  state.committed = true;
   for(const lane of lanes) state.drums[lane] = new Set(project.drums?.[lane] || []);
   applyKit(sessionKits[project.kit] ? project.kit : 'rnb');
 }
@@ -1614,6 +1643,41 @@ function createProject(){
   state.chips=['R&B'];
   state.pattern=[];
   state.idea=0;
+  state.melodyDrafts=[[],[],[],[]];
+  state.instrument='rhodes';
+  state.chords=progressions['A minor'][0];
+  state.chordAdded=false;
+  state.drumsAdded=false;
+  state.vocalAdded=false;
+  if(vocalUrl && vocalUrl.startsWith('blob:')) URL.revokeObjectURL(vocalUrl);
+  vocalUrl='';
+  vocalBuffer=null;
+  state.vocals={title:'Soft hook',line:'keep the night close, don’t say it loud',chain:'Modern R&B'};
+  state.melodyAdded=false;
+  state.drumRolls={};
+  state.customSamples={kick:'',snare:'',clap:'',hat:'',openhat:'',bass:''};
+  state.mix=defaultMix();
+  state.committed=true;
+  applyKit(kit,true);
+  saveProject();
+  setView('home');
+  notify(`${name} saved. Add melody, drums, or chords next.`);
+}
+function startNewIdea(){
+  if(playing) setPlaying(false);
+  history=[]; future=[];
+  selectedNote=-1;
+  state.committed=false;
+  state.id=crypto.randomUUID();
+  state.name='Untitled idea';
+  state.description='';
+  state.bpm=92;
+  state.key='A minor';
+  state.prompt='late-night R&B, warm and a little dark';
+  state.chips=['R&B'];
+  state.pattern=[];
+  state.idea=0;
+  state.melodyDrafts=[[],[],[],[]];
   state.instrument='rhodes';
   state.chords=progressions['A minor'][0];
   state.chordAdded=false;
@@ -1623,10 +1687,16 @@ function createProject(){
   state.drumRolls={};
   state.customSamples={kick:'',snare:'',clap:'',hat:'',openhat:'',bass:''};
   state.mix=defaultMix();
-  applyKit(kit,true);
-  saveProject();
+  state.songMode=false;
+  state.songSection=0;
+  if(vocalUrl && vocalUrl.startsWith('blob:')) URL.revokeObjectURL(vocalUrl);
+  vocalUrl='';
+  vocalBuffer=null;
+  state.vocals={title:'Soft hook',line:'keep the night close, don’t say it loud',chain:'Modern R&B'};
+  localStorage.removeItem('bmai-project');
+  applyKit('rnb',true);
   setView('home');
-  notify(`${name} saved. Add melody, drums, or chords next.`);
+  notify('Name the next project, then create it.');
 }
 function applyKit(id,resetSteps=false){
   const kit=sessionKits[id]; if(!kit) return;
@@ -1636,7 +1706,6 @@ function applyKit(id,resetSteps=false){
       starterKit[lane]=kit[lane];
     }
   }
-  Object.assign(starterKit,kit);
   if(resetSteps) for(const lane of lanes) state.drums[lane]=new Set(kit.steps[lane]);
   const genreSwings = { rnb: 18, trap: 12, house: 8, acoustic: 15, dnb: 0 };
   if(resetSteps && genreSwings[id] !== undefined) state.swing = genreSwings[id];
@@ -1646,6 +1715,15 @@ applyKit(state.kit);
 
 function notify(msg){const toast=document.querySelector('.toast');toast.textContent=msg;toast.classList.add('show');clearTimeout(notify.t);notify.t=setTimeout(()=>toast.classList.remove('show'),2200)}
 function setView(view){
+  if(view!=='home' && !state.committed){
+    notify('Create a project first');
+    if(state.view!=='home'){
+      state.view='home';
+      renderApp();
+    }
+    if(location.hash.slice(1) && location.hash.slice(1)!=='home') location.hash='home';
+    return;
+  }
   state.view=view;
   if(location.hash.slice(1)!==view) location.hash=view;
   if(view!=='home') saveProject();
@@ -1677,6 +1755,7 @@ function applyStudioLayout(){
     shell.style.gridTemplateColumns='';
     shell.style.gridTemplateRows='';
     shell.style.gridTemplateAreas='';
+    alignRollRuler();
     return;
   }
   const nav=studioNav.open?(wide?'160px':'185px'):'minmax(0,0px)';
@@ -1686,6 +1765,13 @@ function applyStudioLayout(){
   shell.style.gridTemplateAreas=pianoOn
     ?'"top top top" "bar bar bar" "nav stage side" "nav piano side" "foot foot foot"'
     :'"top top top" "bar bar bar" "nav stage side" "foot foot foot"';
+  alignRollRuler();
+}
+function alignRollRuler(){
+  const wrap=document.querySelector('#piano-wrap');
+  const ruler=document.querySelector('.roll-ruler');
+  if(!wrap||!ruler) return;
+  ruler.style.paddingRight=`${Math.max(0,wrap.offsetWidth-wrap.clientWidth)}px`;
 }
 function setStudioNav(open){
   studioNav.open=open;
@@ -1740,7 +1826,7 @@ function applySessionKey(next){
   if(next===state.key) return;
   const from=scaleForKey(state.key);
   const to=scaleForKey(next);
-  state.pattern=state.pattern.map(note=>{
+  const shift=list=>(list||[]).map(note=>{
     let degree=from.indexOf(note.n);
     if(degree<0){
       const pitch=pitchOf(note.n);
@@ -1748,6 +1834,8 @@ function applySessionKey(next){
     }
     return {...note,n:to[degree]};
   });
+  state.pattern=shift(state.pattern);
+  state.melodyDrafts=(state.melodyDrafts||[[],[],[],[]]).map(shift);
   state.key=next;
   state.chords=(progressions[next]||[]).find(item=>item.name===state.chords.name)||progressions[next][0];
   saveProject();
@@ -1774,7 +1862,65 @@ function setKeyMenuOpen(open){
   trigger.setAttribute('aria-expanded',String(open));
   if(open) placeKeyMenu();
 }
-function generateMelody(){history.push(state.pattern.map(note=>({...note})));future=[];const scale=scaleForKey();state.idea=0;state.pattern=Array.from({length:8},(_,i)=>({n:scale[Math.floor(Math.random()*scale.length)],x:i*2+Math.floor(Math.random()*2),w:1+Math.floor(Math.random()*2)}));state.melodyAdded=true;saveProject();renderApp();scrollPianoToNotes();notify('Four melody ideas ready')}
+function cloneNotes(list){return (list||[]).map(note=>({...note}))}
+function rememberMelodyDraft(){
+  if(!Array.isArray(state.melodyDrafts)||state.melodyDrafts.length!==4) state.melodyDrafts=[[],[],[],[]];
+  const index=Math.max(0,Math.min(3,state.idea||0));
+  state.melodyDrafts[index]=cloneNotes(state.pattern);
+}
+function buildMelodyPhrase(scale, style){
+  const pick=degree=>scale[((degree%scale.length)+scale.length)%scale.length];
+  const rand=n=>Math.floor(Math.random()*n);
+  if(style===0){
+    let degree=rand(3);
+    return Array.from({length:8},(_,i)=>{
+      degree=(degree+(rand(3)===0?-1:1)+scale.length)%scale.length;
+      const w=rand(3)?1:2;
+      const x=Math.min(15,i*2);
+      return {n:pick(degree),x,w:Math.min(w,16-x)};
+    });
+  }
+  if(style===1){
+    let degree=scale.length-1;
+    return Array.from({length:6},(_,i)=>{
+      degree=Math.max(0,degree-(rand(2)+1));
+      if(i===4) degree=Math.min(scale.length-1,degree+2);
+      const x=Math.min(14,i*2+(i>3?2:0));
+      return {n:pick(degree),x,w:Math.min(2,16-x)};
+    });
+  }
+  if(style===2){
+    const a=rand(scale.length);
+    const b=(a+2)%scale.length;
+    return [{n:pick(a),x:0,w:2},{n:pick(b),x:8,w:3}];
+  }
+  return Array.from({length:6},(_,i)=>{
+    const x=Math.min(15,i*2+1);
+    return {n:pick(rand(scale.length)),x,w:1};
+  });
+}
+function generateMelody(onlyCurrent=false){
+  const scale=scaleForKey();
+  history.push(cloneNotes(state.pattern));
+  future=[];
+  if(!Array.isArray(state.melodyDrafts)||state.melodyDrafts.length!==4) state.melodyDrafts=[[],[],[],[]];
+  const hasDrafts=state.melodyDrafts.some(list=>list?.length);
+  if(onlyCurrent && hasDrafts){
+    state.melodyDrafts[state.idea]=buildMelodyPhrase(scale, state.idea);
+    state.pattern=cloneNotes(state.melodyDrafts[state.idea]);
+    notify(`${melodyIdeas[state.idea].name} regenerated. Add it when it sounds right.`);
+  }else{
+    state.melodyDrafts=[0,1,2,3].map(style=>buildMelodyPhrase(scale, style));
+    state.idea=0;
+    state.pattern=cloneNotes(state.melodyDrafts[0]);
+    notify('Four melody ideas ready. Pick one, then add it.');
+  }
+  state.melodyAdded=false;
+  selectedNote=-1;
+  saveProject();
+  renderApp();
+  scrollPianoToNotes();
+}
 function generateDrums(){
   const kit=sessionKits[state.kit];
   for(const lane of lanes) state.drums[lane]=new Set(kit.steps[lane]);
@@ -1784,13 +1930,9 @@ function generateDrums(){
     state.drums.snare.add(10);
     if(Math.random()>.5) state.drums.snare.add(14);
   }
-  if(!state.drumsAdded) state.drumsAdded=true;
-  saveProject();renderApp();notify('Beat humanized with ghost notes & dynamic groove');
+  saveProject();renderApp();notify(state.drumsAdded?'Beat rewritten.':'Beat rewritten. Add drums when the pocket is right.');
 }
-function markDrumsInProject(){
-  if(!state.drumsAdded){state.drumsAdded=true;saveProject()}
-}
-function generateChords(){const options=progressions[state.key]||progressions['A minor'];state.chords=options[Math.floor(Math.random()*options.length)];state.chordAdded=true;saveProject();renderApp();notify(`${state.chords.name} chords added`)}
+function generateChords(){const options=progressions[state.key]||progressions['A minor'];state.chords=options[Math.floor(Math.random()*options.length)];state.chordAdded=false;saveProject();renderApp();notify(`${state.chords.name} is ready. Add it to the project.`)}
 function generateVocals(){
   const mood=(state.chips[0]||'R&B').toLowerCase();
   const seed=state.prompt.split(/[\s,]+/).filter(Boolean)[0]||'night';
@@ -1799,8 +1941,9 @@ function generateVocals(){
     {title:'Low refrain',line:`I still hear that ${mood} in the hallway`,chain:state.vocals.chain},
     {title:'Lift',line:`wait for the drop, then let the ${seed} bloom`,chain:state.vocals.chain}
   ];
-  state.vocals=lines[Math.floor(Math.random()*lines.length)];
-  state.vocalAdded=true;saveProject();renderApp();notify('Vocal idea added to the project');
+  const next=lines[Math.floor(Math.random()*lines.length)];
+  state.vocals={...state.vocals,...next,url:state.vocals.url||''};
+  saveProject();renderApp();notify(vocalUrl?'Hook line updated. Add the vocal when it sounds right.':'Hook line updated. Load or record audio, then add it.');
 }
 
 const app=document.querySelector('#app');
@@ -1832,9 +1975,7 @@ app.innerHTML=`
         <span class="divider"></span>
         <canvas id="audio-visualizer" class="spectrum-canvas" width="105" height="24" title="Real-time Audio Spectrum Visualizer"></canvas>
         <span class="divider"></span>
-        <span>4 / 4</span>
-        <span class="divider"></span>
-        <span>♬ 1/16</span>
+        <span class="meter-chip">4/4</span>
       </div>
     </section>
     <button class="nav-toggle" id="nav-toggle" type="button" aria-controls="studio-nav" aria-expanded="true"><span aria-hidden="true">‹</span></button>
@@ -1842,15 +1983,15 @@ app.innerHTML=`
       <aside class="tools" id="studio-nav">
         <div class="sidebar-title">Studio <span>✦</span></div>
         <button class="tool" data-view="home"><i>□</i><span>Projects</span><small>home</small></button>
-        <button class="tool" data-view="melody"><i>⌁</i><span>Melody</span><small>in this project</small></button>
-        <button class="tool" data-view="drums"><i>◌</i><span>Drums</span><small>in this project</small></button>
-        <button class="tool" data-view="chords"><i>⌗</i><span>Chords</span><small>in this project</small></button>
-        <button class="tool" data-view="vocals"><i>◒</i><span>Vocals</span><small>in this project</small></button>
+        <button class="tool" data-view="melody"><i>⌁</i><span>Melody</span><small>inside</small></button>
+        <button class="tool" data-view="drums"><i>◌</i><span>Drums</span><small>inside</small></button>
+        <button class="tool" data-view="chords"><i>⌗</i><span>Chords</span><small>inside</small></button>
+        <button class="tool" data-view="vocals"><i>◒</i><span>Vocals</span><small>inside</small></button>
         <div class="sidebar-bottom">
-          <button class="library">▣ &nbsp; Sound library</button>
+          <button class="library">▣ &nbsp; Library</button>
           <button class="nav-link" data-view="mix">🎚 &nbsp; Mix</button>
           <button class="nav-link" data-view="export">↗ &nbsp; Export</button>
-          <button class="settings" data-view="settings">⚙ &nbsp; Project settings</button>
+          <button class="settings" data-view="settings">⚙ &nbsp; Settings</button>
         </div>
       </aside>
       <section class="main-stage" id="stage"></section>
@@ -1868,12 +2009,12 @@ app.innerHTML=`
         <div>
           <p class="piano-kicker"><span class="piano-dot"></span>PIANO ROLL</p>
           <strong id="piano-label">Keys · AI Melody 01</strong>
-          <p class="piano-hint">Drag a note to move it. Drag the bright edge to change length. Click empty grid to add. Remove deletes the selected note.</p>
+          <p class="piano-hint" title="Drag a note to move it. Drag the bright edge to change length. Click empty grid to add. Remove deletes the selected note.">Drag a note to move it. Drag the bright edge to change length. Click empty grid to add. Remove deletes the selected note.</p>
         </div>
         <div class="piano-tools">
           <div class="piano-selected" id="piano-selected">Click a note to edit it</div>
           <button class="ghost" id="remove-note" type="button" disabled>Remove</button>
-          <select id="piano-inst" class="piano-inst-select" title="Change instrument"><option value="rhodes">Rhodes EP</option><option value="piano">Grand Piano</option><option value="guitar">Acoustic Guitar</option><option value="strings">Orchestral Strings</option><option value="bass">808 Bass</option><option value="brass">Synth Brass</option><option value="organ">Church Organ</option><option value="flute">Concert Flute</option><option value="pad">Lofi Pad</option><option value="analog">Analog Poly</option><option value="pluck">Crystal Pluck</option></select>
+          <select id="piano-inst" class="piano-inst-select" title="Change instrument"><option value="rhodes">Rhodes</option><option value="piano">Piano</option><option value="guitar">Guitar</option><option value="strings">Strings</option><option value="bass">Bass</option><option value="brass">Brass</option><option value="organ">Organ</option><option value="flute">Flute</option><option value="pad">Pad</option><option value="analog">Analog</option><option value="pluck">Pluck</option></select>
           <button class="ghost" data-roll="undo" type="button">Undo</button>
           <button class="ghost" data-roll="redo" type="button">Redo</button>
         </div>
@@ -1897,23 +2038,25 @@ const melodyIdeas = [
 ];
 function arrangement(){
   const kit=sessionKits[state.kit];
+  const tracks=[];
+  if(state.melodyAdded) tracks.push(`<div class="arrangement ${(!isTrackActive('keys')||state.mix.keys.mute)?'muted-track':''}" data-arrange-track="keys"><div class="track-label"><span class="track-icon">♪</span><div><strong>Keys</strong><small>Electric piano</small></div></div><div class="clip"><span>${esc(melodyIdeas[state.idea].name)}</span><div class="mini-notes"></div></div></div>`);
+  if(state.drumsAdded) tracks.push(`<div class="arrangement drum-track ${(!isTrackActive('drums')||state.mix.drums.mute)?'muted-track':''}" data-arrange-track="drums"><div class="track-label"><span class="track-icon">◌</span><div><strong>Drums</strong><small id="drum-kit-label">${esc(kit.blurb)}</small></div></div><div class="clip drum-clip"><span>Kick · Snare · Clap · Hat · Open Hat · Bass</span><div class="mini-notes"></div></div></div>`);
+  if(state.chordAdded) tracks.push(`<div class="arrangement ${(!isTrackActive('chords')||state.mix.chords.mute)?'muted-track':''}" data-arrange-track="chords"><div class="track-label"><span class="track-icon">⌗</span><div><strong>Chords</strong><small>${esc(state.chords.name)}</small></div></div><div class="clip chord-clip"><span>${esc(state.chords.bars.join(' · '))}</span></div></div>`);
+  if(state.vocalAdded) tracks.push(`<div class="arrangement ${(!isTrackActive('vocals')||state.mix.vocals.mute)?'muted-track':''}" data-arrange-track="vocals"><div class="track-label"><span class="track-icon">◒</span><div><strong>Vocals</strong><small>${esc(state.vocals.chain)}</small></div></div><div class="clip vocal-clip"><span>${esc(state.vocals.line)}</span></div></div>`);
   return `
     <div class="arrange-block">
     <div class="timeline-title"><span>${state.songMode?`SONG: ${(state.sections[state.songSection]?.name||'Intro').toUpperCase()}`:'1 BAR LOOP'}</span><div class="timeline-ruler"><span>1</span><span>2</span><span>3</span><span>4</span></div></div>
-    <div class="arrangement ${(!isTrackActive('keys')||state.mix.keys.mute)?'muted-track':''}" data-arrange-track="keys"><div class="track-label"><span class="track-icon">♪</span><div><strong>Keys</strong><small>Electric piano</small></div></div><div class="clip"><span>${state.melodyAdded?esc(melodyIdeas[state.idea].name):'Empty clip'}</span><div class="mini-notes"></div></div></div>
-    <div class="arrangement drum-track ${(!isTrackActive('drums')||state.mix.drums.mute)?'muted-track':''}" data-arrange-track="drums"><div class="track-label"><span class="track-icon">◌</span><div><strong>Drums</strong><small id="drum-kit-label">${esc(kit.blurb)}</small></div></div><div class="clip drum-clip"><span>Kick · Snare · Clap · Hat · Open Hat · Bass</span><div class="mini-notes"></div></div></div>
-    ${state.chordAdded?`<div class="arrangement ${(!isTrackActive('chords')||state.mix.chords.mute)?'muted-track':''}" data-arrange-track="chords"><div class="track-label"><span class="track-icon">⌗</span><div><strong>Chords</strong><small>${esc(state.chords.name)}</small></div></div><div class="clip chord-clip"><span>${esc(state.chords.bars.join(' · '))}</span></div></div>`:''}
-    ${state.vocalAdded?`<div class="arrangement ${(!isTrackActive('vocals')||state.mix.vocals.mute)?'muted-track':''}" data-arrange-track="vocals"><div class="track-label"><span class="track-icon">◒</span><div><strong>Vocals</strong><small>${esc(state.vocals.chain)}</small></div></div><div class="clip vocal-clip"><span>${esc(state.vocals.line)}</span></div></div>`:''}
+    ${tracks.length?tracks.join(''):'<p class="page-lead arrange-empty">Nothing in this project yet. Add a melody, drums, chords, or a vocal.</p>'}
     <div class="arrange-playhead" id="arrange-playhead"></div>
 
     <div class="song-structure-bar">
       <div class="song-structure-head">
         <div class="structure-mode-toggle">
           <button type="button" class="mode-pill ${state.songMode?'on':''}" id="toggle-song-mode" title="Toggle between single 1-bar loop and full song progression">
-            <span class="mode-dot"></span> ${state.songMode ? 'SONG ARRANGEMENT ACTIVE' : 'LOOP MODE (1 BAR)'}
+            <span class="mode-dot"></span> ${state.songMode ? 'SONG' : 'LOOP'}
           </button>
         </div>
-        <span class="structure-hint">${state.songMode ? `Current: ${state.sections[state.songSection].name.toUpperCase()} (playing)` : 'Click to enable multi-section song progression'}</span>
+        <span class="structure-hint">${state.songMode ? state.sections[state.songSection].name : '1 bar loop'}</span>
       </div>
       <div class="section-tiles">
         ${state.sections.map((sec, i) => `
@@ -1955,7 +2098,7 @@ function backToProject(){
 }
 function stageHome(){
   const projects=loadProjects();
-  const current=projects.find(project=>project.id===state.id);
+  const current=state.committed?projects.find(project=>project.id===state.id):null;
   const inside=projectParts(current||projectSnapshot());
   return `<div class="page-stack">
     <div class="stage-header"><div><p class="eyebrow">PROJECTS</p><h1>Make a project, then add the music into it.</h1></div><span class="session-pill">${projects.length} saved</span></div>
@@ -1966,10 +2109,10 @@ function stageHome(){
       <p class="description">${esc(current.description||'No description yet.')}</p>
       <div class="details">${inside.length?inside.map(part=>`<div><span>${esc(part.label.toUpperCase())}</span><strong>${esc(part.value)}</strong></div>`).join(''):'<div><span>INSIDE</span><strong>Nothing added yet</strong></div>'}</div>
       <div class="genre-grid project-jumps">
-        <button class="choice-card ${state.melodyAdded?'chosen':''}" data-view="melody" type="button"><strong>Melody</strong><small>${state.melodyAdded?esc(melodyIdeas[state.idea].name):'Not in this project yet'}</small></button>
-        <button class="choice-card ${state.drumsAdded?'chosen':''}" data-view="drums" type="button"><strong>Drums</strong><small>${state.drumsAdded?esc(sessionKits[state.kit].blurb):'Not in this project yet'}</small></button>
-        <button class="choice-card ${state.chordAdded?'chosen':''}" data-view="chords" type="button"><strong>Chords</strong><small>${state.chordAdded?esc(state.chords.name):'Not in this project yet'}</small></button>
-        <button class="choice-card ${state.vocalAdded?'chosen':''}" data-view="vocals" type="button"><strong>Vocals</strong><small>${state.vocalAdded?esc(state.vocals.title):'Not in this project yet'}</small></button>
+        <button class="choice-card ${state.melodyAdded?'chosen':''}" data-view="melody" type="button"><strong>Melody</strong><small>${state.melodyAdded?esc(melodyIdeas[state.idea].name):'Empty'}</small></button>
+        <button class="choice-card ${state.drumsAdded?'chosen':''}" data-view="drums" type="button"><strong>Drums</strong><small>${state.drumsAdded?esc(sessionKits[state.kit].blurb):'Empty'}</small></button>
+        <button class="choice-card ${state.chordAdded?'chosen':''}" data-view="chords" type="button"><strong>Chords</strong><small>${state.chordAdded?esc(state.chords.name):'Empty'}</small></button>
+        <button class="choice-card ${state.vocalAdded?'chosen':''}" data-view="vocals" type="button"><strong>Vocals</strong><small>${state.vocalAdded?esc(state.vocals.title):'Empty'}</small></button>
       </div>
     </section>`:''}
     <form class="take-box" id="create-project-form">
@@ -1999,8 +2142,8 @@ function stageMelody(){
       <div class="prompt"><span class="spark">✦</span><input id="prompt" value="${esc(state.prompt)}" aria-label="Describe melody" /><button id="generate">Generate <span>↗</span></button></div>
       <div class="chips">${['R&B','Dark','Smooth','Simple'].map(chip=>`<button class="chip ${state.chips.includes(chip)?'selected':''}" data-chip="${chip}">${chip}</button>`).join('')}<button class="chip settings-chip" data-open="settings">⚙ Options</button></div>
     </div>
-    <div class="ideas-head"><span>4 GENERATED IDEAS</span><span class="hint">Choose one, then open Drums or Chords</span></div>
-    <div class="ideas">${melodyIdeas.map((idea,i)=>`<article class="idea ${i===state.idea?'chosen':''}" data-idea="${i}"><div class="idea-number">0${i+1}</div><div class="wave">${Array.from({length:22},(_,x)=>`<i style="height:${14+Math.abs(Math.sin(x*1.4+i))*23}px"></i>`).join('')}</div><div class="idea-text"><strong>${idea.name}</strong><span>${idea.tag}</span></div><button class="add" data-add-melody>+</button></article>`).join('')}</div>
+    <div class="ideas-head"><span>4 GENERATED IDEAS</span><span class="hint">Pick one, then add it to the project</span></div>
+    <div class="ideas">${melodyIdeas.map((idea,i)=>{const ready=!!state.melodyDrafts?.[i]?.length;return `<article class="idea ${ready&&i===state.idea?'chosen':''}" data-idea="${i}"><div class="idea-number">0${i+1}</div><div class="wave">${Array.from({length:22},(_,x)=>`<i style="height:${14+Math.abs(Math.sin(x*1.4+i))*23}px"></i>`).join('')}</div><div class="idea-text"><strong>${idea.name}</strong><span>${state.melodyAdded&&i===state.idea?'In this project':idea.tag}</span></div><button class="add" data-add-melody="${i}" type="button" title="Add this idea">+</button></article>`}).join('')}</div>
     ${arrangement()}
   </div>`;
 }
@@ -2013,7 +2156,7 @@ function stageDrums(){
     <div class="drum-top-bar">
       <div class="kit-row page-kits">${Object.entries(sessionKits).map(([id])=>`<button type="button" data-kit="${id}" class="${state.kit===id?'on':''}">${kitNames[id]}</button>`).join('')}</div>
       <button type="button" class="punch-btn ${isPunch?'on':''}" id="toggle-drum-punch" title="Analog soft-clipper saturation on drum bus">
-        <span class="punch-led"></span> DRUM PUNCH (SOFT CLIP)
+        <span class="punch-led"></span> PUNCH
       </button>
     </div>
     <div class="drum-lanes">${lanes.map(lane=>{
@@ -2027,7 +2170,7 @@ function stageDrums(){
             <span class="preview-icon">▷</span>
             <strong>${lane.toUpperCase()}</strong>
           </button>
-          ${lane==='bass'?`<button type="button" class="tuned-808-btn ${state.bassTuned!==false?'on':''}" id="toggle-tuned-808" title="Auto-tune 808 sub bass to chord progression root notes"><span class="pitch-dot"></span> TUNED 808</button>`:''}
+          ${lane==='bass'?`<button type="button" class="tuned-808-btn ${state.bassTuned!==false?'on':''}" id="toggle-tuned-808" title="Tune 808 to the chord root"><span class="pitch-dot"></span> TUNE</button>`:''}
           <div class="lane-sample-control">
             <button type="button" class="lane-sample-btn ${hasCustom?'has-custom':''}" data-pick-lane="${lane}" title="Drag &amp; drop audio file (.wav, .mp3) here or click to browse">
               <span class="sample-name" title="${esc(sampleName)}">${esc(sampleName)}</span>
@@ -2047,7 +2190,7 @@ function stageDrums(){
         }).join('')}</div>
       </div>`;
     }).join('')}</div>
-    <div class="take-actions"><button class="page-btn hot" id="humanize-drums">Humanize beat</button><button class="page-btn" data-open="library">Browse kits</button><button class="page-btn" id="open-public-sources">🎁 Free Sound Packs</button></div>
+    <div class="take-actions"><button class="page-btn hot" id="humanize-drums">Humanize</button><button class="page-btn" id="add-drums">${state.drumsAdded?'In project':'Add drums'}</button><button class="page-btn" data-open="library">Kits</button><button class="page-btn" id="open-public-sources">Free packs</button></div>
     ${arrangement()}
   </div>`;
 }
@@ -2057,11 +2200,11 @@ function stageChords(){
   const barCount = state.chords?.bars?.length > 4 ? (state.chords.bars.length / 4) + ' bars' : '1 bar';
   return `<div class="page-stack">
     ${backToProject()}
-    <div class="stage-header"><div><p class="eyebrow">AI CHORDS</p><h1>Build a harmonic bed in ${esc(state.key)}.</h1></div><span class="session-pill">${esc(state.chords.bars.join(' · '))} (${barCount})</span></div>
-    <p class="page-lead">Pick a chord progression in ${esc(state.key)}. Rich extended voicings (7ths, 9ths, 11ths) loop smoothly with your beat and export directly to MIDI.</p>
+    <div class="stage-header"><div><p class="eyebrow">AI CHORDS</p><h1>Build a harmonic bed in ${esc(state.key)}.</h1></div><span class="session-pill">${esc(state.chords.name)} · ${barCount}</span></div>
+    <p class="page-lead">Pick a progression in ${esc(state.key)}, listen on this page, then add it. It stays out of the project until you do.</p>
     <div class="ideas">${options.map(option=>`<article class="idea ${option.name===state.chords.name?'chosen':''}" data-chord="${esc(option.name)}"><div class="idea-number">${esc(option.bars[0])}</div><div class="idea-text"><strong>${esc(option.name)}</strong><span>${esc(option.feel)} · ${option.bars.length > 4 ? (option.bars.length / 4) + ' bars' : '1 bar'}</span></div></article>`).join('')}</div>
     <div class="chord-bars">${state.chords.bars.map((bar,i)=>`<div class="chord-bar"><span>BEAT ${i+1}</span><b>${esc(bar)}</b></div>`).join('')}</div>
-    <div class="take-actions"><button class="page-btn hot" id="generate-chords">Regenerate in this key</button><button class="page-btn" id="add-chords">Add chords to project</button></div>
+    <div class="take-actions"><button class="page-btn hot" id="generate-chords">Regenerate</button><button class="page-btn" id="add-chords">${state.chordAdded?'In project':'Add chords'}</button></div>
     ${arrangement()}
   </div>`;
 }
@@ -2081,15 +2224,15 @@ const factoryVocals = [
   { name: 'Shine Muscat', url: '/sounds/stargate/microlag/One-Shots/Vocals/Shine_Muscat_Is_Bussin.wav', tag: 'Catchphrase Drop' }
 ];
 async function useVocalSource(url, title){
-  if(vocalUrl && vocalUrl.startsWith('blob:')) URL.revokeObjectURL(vocalUrl);
+  if(vocalUrl && vocalUrl.startsWith('blob:') && vocalUrl !== url) URL.revokeObjectURL(vocalUrl);
   vocalUrl = url;
-  state.vocals = {...state.vocals, title: title || state.vocals.title, line: title || state.vocals.line};
-  state.vocalAdded = true;
+  state.vocals = {...state.vocals, url: url, title: title || state.vocals.title, line: title || state.vocals.line};
+  state.vocalAdded = false;
   await prepareVocalBuffer(url);
   saveProject();
   renderApp();
   playVocalOnce();
-  notify(`${title || 'Vocal'} loaded`);
+  notify(`${title || 'Vocal'} ready. Add it when it sounds right.`);
 }
 function stageVocals(){
   const chains=['Modern R&B','Dark rap','Lo-fi'];
@@ -2100,24 +2243,24 @@ function stageVocals(){
   return `<div class="page-stack">
     ${backToProject()}
     <div class="stage-header"><div><p class="eyebrow">AI VOCALS</p><h1>Choose a free hook, drop, or record a take.</h1></div><span class="session-pill">${esc(state.vocals.chain)}</span></div>
-    <p class="page-lead">Pick one of the built-in hooks, drop in a wav or mp3, or record with the microphone. The take stays in this browser.</p>
-    <div class="ideas-head"><span>FREE BUILT-IN VOCAL HOOKS</span><span class="hint">Click any vocal to audition and load</span></div>
+    <p class="page-lead">Audition a hook, a file, or a microphone take. It joins the project only when you add it, and it needs audio to play.</p>
+    <div class="ideas-head"><span>FREE BUILT-IN VOCAL HOOKS</span><span class="hint">Click a vocal to audition it</span></div>
     <div class="factory-vocals-grid">${factoryVocals.map(v=>`<button type="button" class="vocal-card ${vocalUrl===v.url?'chosen':''}" data-load-vocal="${esc(v.url)}" data-vocal-title="${esc(v.name)}"><span class="vocal-icon">🎙</span><div class="vocal-info"><strong>${esc(v.name)}</strong><span>${esc(v.tag)}</span></div></button>`).join('')}</div>
     <div class="lyric-list">${ideas.map(idea=>`<button class="lyric-line ${idea.title===state.vocals.title?'chosen':''}" data-lyric="${esc(idea.title)}" data-line="${esc(idea.line)}"><strong>${esc(idea.title)}</strong><span> · ${esc(idea.line)}</span></button>`).join('')}</div>
     <div class="kit-row chain-row">${chains.map(chain=>`<button type="button" data-chain="${esc(chain)}" class="${state.vocals.chain===chain?'on':''}">${esc(chain)}</button>`).join('')}</div>
     <div class="take-box vocal-drop-box" id="vocal-drop-zone">
       <strong>${vocalUrl?esc(state.vocals.title||'Vocal loaded'):'Microphone or your own vocal file'}</strong>
-      <p>${vocalUrl?'This vocal plays with the project and is included in the WAV export.':'Record, pick a hook above, or drop a wav or mp3 here.'}</p>
+      <p>${state.vocalAdded?'This vocal is in the project and is included in the WAV export.':vocalUrl?'Auditioning. Add vocals to the project when it sounds right.':'Record, pick a hook above, or drop a wav or mp3 here.'}</p>
       <div class="waveform-box">
         <canvas id="vocal-waveform" class="waveform-canvas" width="480" height="64" title="Vocal Audio Waveform"></canvas>
       </div>
       <div class="take-actions">
-        <button class="page-btn hot" id="record-vocal">Record mic</button>
+        <button class="page-btn hot" id="record-vocal">Record</button>
         <button class="page-btn" id="stop-vocal">Stop</button>
-        <button class="page-btn" id="play-vocal" ${vocalUrl?'':'disabled'}>Play vocal</button>
-        <button class="page-btn" id="pick-vocal-file">Upload wav / mp3</button>
-        ${vocalUrl?'<button class="page-btn" id="clear-vocal">Clear vocal</button>':''}
-        <button class="page-btn" id="add-vocal">Add vocals to project</button>
+        <button class="page-btn" id="play-vocal" ${vocalUrl?'':'disabled'}>Play</button>
+        <button class="page-btn" id="pick-vocal-file">Upload</button>
+        ${vocalUrl?'<button class="page-btn" id="clear-vocal">Clear</button>':''}
+        <button class="page-btn" id="add-vocal">${state.vocalAdded?'In project':'Add vocals'}</button>
       </div>
     </div>
     ${arrangement()}
@@ -2177,23 +2320,23 @@ function stageMix(){
   const isSidechainOn = state.sidechain !== false;
 
   return `<div class="page-stack">
-    <div class="stage-header"><div><p class="eyebrow">MIX &amp; MASTER</p><h1>Polish dynamics, EQ and studio space.</h1></div><span class="session-pill">Faders · DSP EQ · Limiter</span></div>
+    <div class="stage-header"><div><p class="eyebrow">MIX &amp; MASTER</p><h1>Polish dynamics, EQ and studio space.</h1></div><span class="session-pill">Faders · EQ</span></div>
     <p class="page-lead">Shape your tracks with the 3-Band Parametric EQ, engage commercial brickwall limiting, pump the kick with sidechain ducking, or sweep the master DJ filter.</p>
 
     <div class="mastering-row">
       <button type="button" class="master-btn ${isLimiterOn?'on':''}" id="toggle-master-limiter" title="Streaming Maximizer & Brickwall Limiter (-0.8dB Peak · +2.8dB Boost)">
         <span class="master-led"></span>
         <div class="master-btn-text">
-          <strong>MASTER LIMITER &amp; MAXIMIZER</strong>
-          <small>${isLimiterOn ? 'Active (-0.8dB Brickwall · +2.8dB Boost)' : 'Bypassed (Clean Headroom)'}</small>
+          <strong>LIMITER</strong>
+          <small>${isLimiterOn ? 'On · -0.8 dB' : 'Bypassed'}</small>
         </div>
       </button>
 
       <button type="button" class="master-btn ${isSidechainOn?'on':''}" id="toggle-sidechain" title="Kick Sidechain Ducking (Ducks chords & bass under kick transient)">
         <span class="master-led"></span>
         <div class="master-btn-text">
-          <strong>KICK SIDECHAIN DUCKING</strong>
-          <small>${isSidechainOn ? 'Active (Pumps Chords & Bass on Kicks)' : 'Bypassed (Flat)'}</small>
+          <strong>SIDECHAIN</strong>
+          <small>${isSidechainOn ? 'On · kick duck' : 'Bypassed'}</small>
         </div>
       </button>
     </div>
@@ -2201,26 +2344,26 @@ function stageMix(){
     <div class="fx-rack-card">
       <div class="fx-rack-header">
         <div class="fx-rack-title">
-          <span class="fx-badge">STUDIO EQ</span>
-          <strong>3-Band Master Parametric Equalizer</strong>
+          <span class="fx-badge">EQ</span>
+          <strong>3-band master</strong>
         </div>
-        <button type="button" class="reset-eq-btn" id="reset-eq">Reset Flat</button>
+        <button type="button" class="reset-eq-btn" id="reset-eq">Reset</button>
       </div>
       <div class="fx-controls-grid eq-grid">
         <div class="fx-knob-box">
-          <div class="fx-knob-label"><span>LOW SHELF (120 Hz)</span><b id="val-eq-low">${(state.eq?.low||0)>0?'+'+state.eq.low:state.eq?.low||0} dB</b></div>
+          <div class="fx-knob-label"><span>LOW</span><b id="val-eq-low">${(state.eq?.low||0)>0?'+'+state.eq.low:state.eq?.low||0} dB</b></div>
           <input type="range" min="-12" max="12" step="0.5" value="${state.eq?.low||0}" id="eq-low" class="fx-slider" />
-          <div class="fx-scale-labels"><span>-12dB Sub Cut</span><span>0dB Flat</span><span>+12dB Bass Boost</span></div>
+          <div class="fx-scale-labels"><span>-12</span><span>0</span><span>+12</span></div>
         </div>
         <div class="fx-knob-box">
-          <div class="fx-knob-label"><span>MID PEAK (1.2 kHz)</span><b id="val-eq-mid">${(state.eq?.mid||0)>0?'+'+state.eq.mid:state.eq?.mid||0} dB</b></div>
+          <div class="fx-knob-label"><span>MID</span><b id="val-eq-mid">${(state.eq?.mid||0)>0?'+'+state.eq.mid:state.eq?.mid||0} dB</b></div>
           <input type="range" min="-12" max="12" step="0.5" value="${state.eq?.mid||0}" id="eq-mid" class="fx-slider" />
-          <div class="fx-scale-labels"><span>-12dB Scoop</span><span>0dB Flat</span><span>+12dB Clarity</span></div>
+          <div class="fx-scale-labels"><span>-12</span><span>0</span><span>+12</span></div>
         </div>
         <div class="fx-knob-box">
-          <div class="fx-knob-label"><span>HIGH SHELF (6.5 kHz)</span><b id="val-eq-high">${(state.eq?.high||0)>0?'+'+state.eq.high:state.eq?.high||0} dB</b></div>
+          <div class="fx-knob-label"><span>HIGH</span><b id="val-eq-high">${(state.eq?.high||0)>0?'+'+state.eq.high:state.eq?.high||0} dB</b></div>
           <input type="range" min="-12" max="12" step="0.5" value="${state.eq?.high||0}" id="eq-high" class="fx-slider" />
-          <div class="fx-scale-labels"><span>-12dB Dark</span><span>0dB Flat</span><span>+12dB Air &amp; Sheen</span></div>
+          <div class="fx-scale-labels"><span>-12</span><span>0</span><span>+12</span></div>
         </div>
       </div>
     </div>
@@ -2228,26 +2371,26 @@ function stageMix(){
     <div class="fx-rack-card">
       <div class="fx-rack-header">
         <div class="fx-rack-title">
-          <span class="fx-badge">DSP RACK</span>
-          <strong>Studio Space &amp; Master DJ Filter</strong>
+          <span class="fx-badge">FX</span>
+          <strong>Space &amp; filter</strong>
         </div>
         <span class="fx-status-tag" id="fx-status-tag">${filterTag}</span>
       </div>
       <div class="fx-controls-grid">
         <div class="fx-knob-box">
-          <div class="fx-knob-label"><span>DJ FILTER SWEEP</span><b id="val-fx-filter">${filterVal > 0 ? '+' + filterVal : filterVal}</b></div>
+          <div class="fx-knob-label"><span>FILTER</span><b id="val-fx-filter">${filterVal > 0 ? '+' + filterVal : filterVal}</b></div>
           <input type="range" min="-100" max="100" value="${filterVal}" id="fx-filter" class="fx-slider" />
-          <div class="fx-scale-labels"><span>Lowpass (Club)</span><span>Flat</span><span>Highpass (Thin)</span></div>
+          <div class="fx-scale-labels"><span>LP</span><span>Flat</span><span>HP</span></div>
         </div>
         <div class="fx-knob-box">
-          <div class="fx-knob-label"><span>SPACE REVERB</span><b id="val-fx-reverb">${Math.round((state.fx?.reverb ?? 0.22) * 100)}%</b></div>
+          <div class="fx-knob-label"><span>REVERB</span><b id="val-fx-reverb">${Math.round((state.fx?.reverb ?? 0.22) * 100)}%</b></div>
           <input type="range" min="0" max="100" value="${Math.round((state.fx?.reverb ?? 0.22) * 100)}" id="fx-reverb" class="fx-slider" />
-          <div class="fx-scale-labels"><span>Dry</span><span>Warm Hall</span></div>
+          <div class="fx-scale-labels"><span>Dry</span><span>Hall</span></div>
         </div>
         <div class="fx-knob-box">
-          <div class="fx-knob-label"><span>STEREO DELAY</span><b id="val-fx-delay">${Math.round((state.fx?.delay ?? 0.15) * 100)}%</b></div>
+          <div class="fx-knob-label"><span>DELAY</span><b id="val-fx-delay">${Math.round((state.fx?.delay ?? 0.15) * 100)}%</b></div>
           <input type="range" min="0" max="100" value="${Math.round((state.fx?.delay ?? 0.15) * 100)}" id="fx-delay" class="fx-slider" />
-          <div class="fx-scale-labels"><span>Dry</span><span>3/16 Echo</span></div>
+          <div class="fx-scale-labels"><span>Dry</span><span>Echo</span></div>
         </div>
       </div>
     </div>
@@ -2265,15 +2408,15 @@ function stageExport(){
     <div class="export-card featured-export">
       <div class="export-badge-pill">STUDIO AUDIO (WAV)</div>
       <h3>Master Audio Mixdown (.wav)</h3>
-      <p>Pristine 16-bit 44.1kHz stereo audio file with drum punch, pitched 808s, master brickwall limiter, 3-band EQ, and studio effects applied. Ready for TikTok, YouTube, CapCut, Instagram, or direct listening.</p>
+      <p>16-bit 44.1 kHz stereo mix with punch, limiter, and EQ.</p>
       <div class="export-actions">
-        <button class="page-btn hot" id="export-wav-master">Download Master (.wav)</button>
-        <button class="page-btn" id="export-wav-stems">Download Stems (.wav)</button>
+        <button class="page-btn hot" id="export-wav-master">Master WAV</button>
+        <button class="page-btn" id="export-wav-stems">Stems WAV</button>
       </div>
     </div>
 
-    <div class="export-card"><h3>Standard MIDI</h3><p>Complete multi-bar loop: Melody (Ch 1), Chords (Ch 2), Bass (Ch 3), and GM Drums (Ch 10 with Kick, Snare, Clap, Closed Hat, Open Hat, and Hi-Hat Rolls), ready for Ableton, FL Studio, Logic, or GarageBand.</p><div class="export-actions"><button class="page-btn hot" id="export-midi">Download .mid</button></div></div>
-    <div class="export-card"><h3>BMAI project</h3><p>JSON snapshot of tempo, key, drums, rolls, pan/vol, chords, mix, and the vocal line so you can reopen or share this session.</p><div class="export-actions"><button class="page-btn hot" id="export-json">Download .json</button><button class="page-btn" id="import-json">Import .json</button></div></div>
+    <div class="export-card"><h3>Standard MIDI</h3><p>Melody, chords, bass, and drums for Ableton, FL Studio, Logic, or GarageBand.</p><div class="export-actions"><button class="page-btn hot" id="export-midi">MIDI</button></div></div>
+    <div class="export-card"><h3>BMAI project</h3><p>JSON snapshot so you can reopen this session.</p><div class="export-actions"><button class="page-btn hot" id="export-json">JSON</button><button class="page-btn" id="import-json">Import</button></div></div>
     ${arrangement()}
   </div>`;
 }
@@ -2288,7 +2431,7 @@ function stageSettings(){
       <label>Key<select id="settings-key">${allKeys.map(key=>`<option ${key===state.key?'selected':''}>${key}</option>`).join('')}</select></label>
       <label>Time signature<select id="settings-meter"><option>4 / 4</option></select></label>
     </div>
-    <div class="take-actions"><button class="page-btn hot" id="save-settings">Save settings</button><button class="page-btn" id="import-json-settings">Import project</button><button class="page-btn" id="new-idea">Start a new idea</button></div>
+    <div class="take-actions"><button class="page-btn hot" id="save-settings">Save</button><button class="page-btn" id="import-json-settings">Import</button><button class="page-btn" id="new-idea">New idea</button></div>
   </div>`;
 }
 
@@ -2296,15 +2439,18 @@ function inspectorCard(eyebrow,art,body){
   return `<div class="inspector-title"><span>${esc(eyebrow)}</span><button id="close-inspector" type="button" aria-label="Close panel">×</button></div><div class="preset-art"><div class="orb"></div><span>${esc(art)}</span></div>${body}`;
 }
 function inspectorFor(){
-  if(state.view==='home') return inspectorCard('THIS PROJECT',state.key,`<h2>${esc(state.name)}</h2><p class="description">${esc(state.description||'No description yet.')}</p><div class="details"><div><span>INSIDE</span><strong>${esc(contentsLine(projectSnapshot()))}</strong></div></div>`);
-  if(state.view==='drums') return inspectorCard('DRUM KIT',state.kit.toUpperCase(),`<h2>${esc(sessionKits[state.kit].blurb)}</h2><p class="description">16-step grid, four lanes. Humanize moves hats and ghost kicks without wiping the kit.</p><button class="full-preview" id="preview">▷ &nbsp; Preview beat</button><button class="add-project" id="humanize-drums">Humanize beat</button>`);
-  if(state.view==='chords') return inspectorCard('PROGRESSION',state.key,`<h2>${esc(state.chords.name)}</h2><p class="description">${esc(state.chords.feel)}</p><div class="details"><div><span>BARS</span><strong>${esc(state.chords.bars.join(' · '))}</strong></div></div><button class="add-project" id="add-chords">+ &nbsp; Add to project</button>`);
+  if(state.view==='home'){
+    if(!state.committed) return inspectorCard('PROJECTS','NEW',`<h2>No project yet</h2><p class="description">Create a project on this page. Melody, drums, chords, and vocals open after that.</p>`);
+    return inspectorCard('THIS PROJECT',state.key,`<h2>${esc(state.name)}</h2><p class="description">${esc(state.description||'No description yet.')}</p><div class="details"><div><span>INSIDE</span><strong>${esc(contentsLine(projectSnapshot()))}</strong></div></div>`);
+  }
+  if(state.view==='drums') return inspectorCard('DRUM KIT',state.kit.toUpperCase(),`<h2>${esc(sessionKits[state.kit].blurb)}</h2><p class="description">Program the grid, then add the beat. It stays out of playback and export until you do.</p><button class="full-preview" id="preview">▷ &nbsp; Preview beat</button><button class="add-project" id="add-drums">${state.drumsAdded?'In project':'Add drums'}</button><button class="text-btn" id="humanize-drums">Humanize beat</button>`);
+  if(state.view==='chords') return inspectorCard('PROGRESSION',state.key,`<h2>${esc(state.chords.name)}</h2><p class="description">${esc(state.chords.feel)}</p><div class="details"><div><span>BARS</span><strong>${state.chords.bars?.length>4?(state.chords.bars.length/4)+' bars':'1 bar'}</strong></div></div><button class="add-project" id="add-chords">+ &nbsp; Add to project</button>`);
   if(state.view==='vocals') return inspectorCard('VOCAL',state.vocals.chain,`<h2>${esc(state.vocals.title)}</h2><p class="description">${esc(state.vocals.line)}</p><button class="add-project" id="add-vocal">+ &nbsp; Add to project</button><button class="text-btn" id="generate-vocals">↻ &nbsp; New hook</button>`);
-  if(state.view==='mix') return inspectorCard('MIX','BALANCE',`<h2>Session balance</h2><p class="description">Muted tracks stay in the arrangement but do not play. Export still includes their MIDI.</p>`);
+  if(state.view==='mix') return inspectorCard('MIX','BALANCE',`<h2>Session balance</h2><p class="description">Muted tracks stay in the arrangement but do not play. Export includes only parts added to the project.</p>`);
   if(state.view==='export') return inspectorCard('EXPORT','MIDI',`<h2>Ready to leave</h2><p class="description">MIDI for the DAW, JSON to reopen this BMAI session.</p><button class="add-project" id="export-midi">Download MIDI</button>`);
   if(state.view==='settings') return inspectorCard('SETTINGS',state.key,`<h2>${esc(state.name)}</h2><p class="description">Changes apply to every page in this session.</p>`);
   const idea=melodyIdeas[state.idea]||melodyIdeas[0];
-  return inspectorCard(`IDEA 0${state.idea+1}`,state.chips.join(' / ')||'R&B',`<h2>${esc(idea.name)}</h2><p class="description">${esc(idea.feel)} It loops for one bar.</p><div class="details"><div><span>KEY</span><strong>${esc(state.key)}</strong></div><div><span>SWING</span><strong>${state.swing}%</strong></div></div><div style="margin:14px 0 6px;"><span style="font:9px 'DM Mono';letter-spacing:.12em;color:#9b99a8;text-transform:uppercase;">Keys Instrument</span><div class="kit-row inst-kit-row" style="margin-top:6px;"><button type="button" data-inst="rhodes" class="${state.instrument==='rhodes'?'on':''}">Rhodes EP</button><button type="button" data-inst="piano" class="${state.instrument==='piano'?'on':''}">Grand Piano</button><button type="button" data-inst="guitar" class="${state.instrument==='guitar'?'on':''}">Acoustic Guitar</button><button type="button" data-inst="strings" class="${state.instrument==='strings'?'on':''}">Strings</button><button type="button" data-inst="bass" class="${state.instrument==='bass'?'on':''}">808 Bass</button><button type="button" data-inst="brass" class="${state.instrument==='brass'?'on':''}">Synth Brass</button><button type="button" data-inst="organ" class="${state.instrument==='organ'?'on':''}">Organ</button><button type="button" data-inst="flute" class="${state.instrument==='flute'?'on':''}">Flute</button><button type="button" data-inst="pad" class="${state.instrument==='pad'?'on':''}">Lofi Pad</button><button type="button" data-inst="analog" class="${state.instrument==='analog'?'on':''}">Analog</button><button type="button" data-inst="pluck" class="${state.instrument==='pluck'?'on':''}">Pluck</button></div></div><button class="full-preview" id="preview">▷ &nbsp; Preview loop</button><button class="add-project" id="add-project">+ &nbsp; Add to project</button><button class="text-btn" id="regenerate">↻ &nbsp; Regenerate this idea</button>`);
+  return inspectorCard(`IDEA 0${state.idea+1}`,state.chips.join(' / ')||'R&B',`<h2>${esc(idea.name)}</h2><p class="description">${esc(idea.feel)} It loops for one bar.</p><div class="details"><div><span>KEY</span><strong>${esc(state.key)}</strong></div><div><span>SWING</span><strong>${state.swing}%</strong></div></div><div class="inst-block"><span>Instrument</span><div class="kit-row inst-kit-row"><button type="button" data-inst="rhodes" class="${state.instrument==='rhodes'?'on':''}">Rhodes</button><button type="button" data-inst="piano" class="${state.instrument==='piano'?'on':''}">Piano</button><button type="button" data-inst="guitar" class="${state.instrument==='guitar'?'on':''}">Guitar</button><button type="button" data-inst="strings" class="${state.instrument==='strings'?'on':''}">Strings</button><button type="button" data-inst="bass" class="${state.instrument==='bass'?'on':''}">Bass</button><button type="button" data-inst="brass" class="${state.instrument==='brass'?'on':''}">Brass</button><button type="button" data-inst="organ" class="${state.instrument==='organ'?'on':''}">Organ</button><button type="button" data-inst="flute" class="${state.instrument==='flute'?'on':''}">Flute</button><button type="button" data-inst="pad" class="${state.instrument==='pad'?'on':''}">Pad</button><button type="button" data-inst="analog" class="${state.instrument==='analog'?'on':''}">Analog</button><button type="button" data-inst="pluck" class="${state.instrument==='pluck'?'on':''}">Pluck</button></div></div><button class="full-preview" id="preview">▷ &nbsp; Preview loop</button><button class="add-project" id="add-project">+ &nbsp; Add to project</button><button class="text-btn" id="regenerate">↻ &nbsp; Regenerate this idea</button>`);
 }
 
 let isResizing = false;
@@ -2320,9 +2466,27 @@ function placeNoteEl(el,p){
   if(label) label.textContent=p.w>=2?p.n:'';
   el.title=`${p.n} · beat ${Math.floor(p.x/4)+1} · ${p.w} ${p.w===1?'step':'steps'} — drag to move, right edge to length`;
 }
+function chordRollPattern(){
+  const bars=state.chords?.bars||[];
+  if(!bars.length) return [];
+  const span=Math.max(1,Math.floor(16/bars.length));
+  const roll=[];
+  bars.forEach((name,i)=>{
+    const tones=chordTones[name]||getChordNotes(name);
+    tones.forEach(n=>{
+      if(notes.includes(n)) roll.push({n,x:Math.min(15,i*span),w:Math.min(span,16-i*span)});
+    });
+  });
+  return roll;
+}
 function updatePianoChrome(){
   const box=document.querySelector('#piano-selected');
   const remove=document.querySelector('#remove-note');
+  if(state.view==='chords'){
+    if(box) box.textContent=`${state.chords.name} · read only`;
+    if(remove) remove.disabled=true;
+    return;
+  }
   const p=state.pattern[selectedNote];
   if(box) box.textContent=p?`${p.n}  ·  beat ${Math.floor(p.x/4)+1}  ·  ${p.w} ${p.w===1?'step':'steps'}`:'Click a note to edit it';
   if(remove) remove.disabled=!p;
@@ -2346,12 +2510,14 @@ function pianoCoords(event){
   };
 }
 function removeSelectedNote(){
+  if(state.view!=='melody') return;
   if(selectedNote<0||!state.pattern[selectedNote]) return;
   const gone=state.pattern[selectedNote];
   history.push(state.pattern.map(note=>({...note})));
   future=[];
   state.pattern.splice(selectedNote,1);
   selectedNote=-1;
+  rememberMelodyDraft();
   saveProject();
   renderPiano();
   notify(`Removed ${gone.n}`);
@@ -2367,21 +2533,31 @@ function renderPiano(){
     const on=scale.includes(n)||scaleNames.has(name);
     return `<button type="button" class="key ${white(n)?'white':'black'}${on?' in-scale':''}" data-note="${n}"><span>${n}</span></button>`;
   }).join('');
-  const rows=notes.map((n,i)=>`${white(n)?'#161722':'#101119'} ${i*16}px ${(i+1)*16}px`).join(',');
+  const row=16;
+  const rows=notes.map((n,i)=>{
+    const y=i*row;
+    const fill=white(n)?'#161722':'#101119';
+    return `${fill} ${y}px ${y+row-1}px,#2a2b38 ${y+row-1}px ${y+row}px`;
+  }).join(',');
   grid.style.background=`repeating-linear-gradient(90deg,transparent 0 calc(25% - 1px),#3c3d4c 0 25%),repeating-linear-gradient(90deg,transparent 0 calc(6.25% - 1px),#2a2b38 0 6.25%),linear-gradient(${rows})`;
   grid.querySelectorAll('.note').forEach(el=>el.remove());
-  state.pattern.forEach((p,i)=>{
+  const rollNotes=state.view==='chords'?chordRollPattern():state.pattern;
+  const editable=state.view==='melody';
+  rollNotes.forEach((p,i)=>{
     if(notes.indexOf(p.n)<0) return;
     const el=document.createElement('div');
-    el.className='note';
+    el.className=state.view==='chords'?'note chord-note':'note';
     el.dataset.i=i;
-    if(selectedNote===i) el.classList.add('selected');
+    if(editable&&selectedNote===i) el.classList.add('selected');
     const label=document.createElement('span');
     label.className='note-pitch';
-    const handle=document.createElement('span');
-    handle.className='note-handle';
-    handle.title='Drag to change length';
-    el.append(label,handle);
+    el.append(label);
+    if(editable){
+      const handle=document.createElement('span');
+      handle.className='note-handle';
+      handle.title='Drag to change length';
+      el.append(handle);
+    }
     placeNoteEl(el,p);
     grid.append(el);
   });
@@ -2409,8 +2585,8 @@ function bindPianoEditor(){
       saveProject();
       try{tone('C5',.45,.12,state.instrument)}catch{}
       renderApp();
-      const instNames={rhodes:'Neo-Soul Rhodes',piano:'Acoustic Grand Piano',guitar:'FluidR3 Acoustic Guitar',strings:'FluidR3 Strings Ensemble',bass:'808 Sub Bass',brass:'80s Synth Brass',organ:'FluidR3 Church Organ',flute:'FluidR3 Concert Flute',pad:'Lofi Ambient Pad',analog:'Analog Poly',pluck:'Crystal Pluck'};
-      notify(`${instNames[state.instrument]||'Keyboard'} loaded`);
+      const instNames={rhodes:'Rhodes',piano:'Piano',guitar:'Guitar',strings:'Strings',bass:'Bass',brass:'Brass',organ:'Organ',flute:'Flute',pad:'Pad',analog:'Analog',pluck:'Pluck'};
+      notify(`${instNames[state.instrument]||'Keys'} loaded`);
     });
   }
   if(wrap&&!wrap.dataset.keysBound){
@@ -2440,6 +2616,7 @@ function bindPianoEditor(){
   let drag=null;
 
   grid.addEventListener('pointerdown',event=>{
+    if(state.view!=='melody') return;
     if(event.button!==0) return;
     const pos=pianoCoords(event);
     if(!pos) return;
@@ -2512,8 +2689,8 @@ function bindPianoEditor(){
       history.push(state.pattern.map(note=>({...note})));
       future=[];
       state.pattern.push({n:noteName,x:current.start.step,w:1});
-      state.melodyAdded=true;
       selectedNote=state.pattern.length-1;
+      rememberMelodyDraft();
       try{tone(noteName,.28,.12)}catch{}
       saveProject();
       renderPiano();
@@ -2523,7 +2700,7 @@ function bindPianoEditor(){
     if(current.moved){
       history.push(state.pattern.map(note=>({...note})));
       future=[];
-      state.melodyAdded=true;
+      rememberMelodyDraft();
       saveProject();
       renderPiano();
       const p=state.pattern[current.index];
@@ -2541,18 +2718,21 @@ function bindPianoEditor(){
 function scrollPianoToNotes(){
   const wrap=document.querySelector('#piano-wrap');
   if(!wrap) return;
-  if(state.pattern?.length){
-    const yPositions=state.pattern.map(p=>notes.indexOf(p.n)).filter(y=>y>=0);
+  const roll=state.view==='chords'?chordRollPattern():state.pattern;
+  if(roll?.length){
+    const yPositions=roll.map(p=>notes.indexOf(p.n)).filter(y=>y>=0);
     if(yPositions.length){
       const minY=Math.min(...yPositions);
       const maxY=Math.max(...yPositions);
-      const centerPx=((minY+maxY)/2)*16;
-      const target=Math.max(0,Math.min(592-wrap.clientHeight,centerPx-wrap.clientHeight/2));
-      wrap.scrollTop=target;
+      const row=16;
+      const rollH=notes.length*row;
+      const centerPx=((minY+maxY)/2)*row;
+      const target=Math.max(0,Math.min(rollH-wrap.clientHeight,centerPx-wrap.clientHeight/2));
+      wrap.scrollTop=Math.round(target/row)*row;
       return;
     }
   }
-  wrap.scrollTop=30;
+  wrap.scrollTop=32;
 }
 
 function renderApp(){
@@ -2564,7 +2744,6 @@ function renderApp(){
   const dockName=document.querySelector('#dock-name');
   if(dockLabel) dockLabel.textContent=inspectorArtLabel();
   if(dockName) dockName.textContent=state.name;
-  document.querySelector('#project-title').textContent=state.name;
   document.querySelector('#bpm').value=state.bpm;
   const keyValue=document.querySelector('#key-value');
   if(keyValue) keyValue.textContent=state.key;
@@ -2572,13 +2751,24 @@ function renderApp(){
   const swingEl=document.querySelector('#swing');
   if(swingEl) swingEl.value=state.swing??18;
   document.querySelector('#key').value=state.key;
+  document.querySelectorAll('.tool[data-view], .nav-link, .settings').forEach(button=>{
+    const locked=!state.committed && button.dataset.view && button.dataset.view!=='home';
+    button.classList.toggle('locked', locked);
+    if(locked) button.title='Create a project first';
+    else if(button.title==='Create a project first') button.title='';
+  });
   document.querySelectorAll('.tool[data-view]').forEach(button=>button.classList.toggle('active',button.dataset.view===state.view));
   document.querySelectorAll('.nav-link, .settings').forEach(button=>button.classList.toggle('on',button.dataset.view===state.view));
+  document.querySelector('#project-title').textContent=state.committed?state.name:'No project';
+  const projectStatus=document.querySelector('.project span:last-child');
+  if(projectStatus && !state.committed) projectStatus.textContent='Create one to start';
   document.querySelector('#piano-section').hidden=!['melody','chords'].includes(state.view);
   const instNames={rhodes:'Rhodes',analog:'Analog',pluck:'Pluck',piano:'Piano',guitar:'Guitar',strings:'Strings',bass:'Bass',brass:'Brass',organ:'Organ',flute:'Flute',pad:'Pad'};
   const chordLen = state.chords?.bars?.length > 4 ? (state.chords.bars.length / 4) + ' bars' : '1 bar';
   const pianoLabel=document.querySelector('#piano-label');
   if(pianoLabel) pianoLabel.textContent=state.view==='chords'?`Chords · ${state.chords.name} · ${chordLen}`:`Keys (${instNames[state.instrument]||'Rhodes'}) · ${melodyIdeas[state.idea].name} · 1 bar`;
+  const pianoHint=document.querySelector('.piano-hint');
+  if(pianoHint) pianoHint.textContent=state.view==='chords'?'Chord voicing for this progression. Switch to Melody to edit notes.':'Drag a note to move it. Drag the bright edge to change length. Click empty grid to add. Add the melody when it sounds right.';
   const pianoInst=document.querySelector('#piano-inst');
   if(pianoInst) pianoInst.value=state.instrument||'rhodes';
   document.querySelector('#status-line').innerHTML=`<b>Ready</b> · ${esc(state.key)} · ${state.swing}% swing · Limiter ${state.masterLimiter!==false?'ON':'BYPASS'}`;
@@ -2652,6 +2842,14 @@ function setPlaying(on){
       state.songSection = 0;
       updateSectionUI();
     }
+    return;
+  }
+
+  const audible=(partAudible('keys')&&state.pattern.length)||partAudible('drums')||partAudible('chords')||partAudible('vocals');
+  if(!audible){
+    playing=false;
+    document.querySelector('#play').textContent='▶';
+    notify('Add a melody, drums, chords, or vocal before playing');
     return;
   }
 
@@ -3183,12 +3381,21 @@ async function renderAudioWav(stemTrack = null){
     offDrumBusInput.connect(offMasterInput);
   }
 
+  for(const lane of lanes){
+    if(!customBuffers[lane] && starterKit[lane] && !bufferCache.has(starterKit[lane])){
+      await getAudioBuffer(starterKit[lane]);
+    }
+  }
+  if(state.vocalAdded && state.vocals?.url && !vocalBuffer){
+    await prepareVocalBuffer(state.vocals.url);
+  }
+
   for(let b = 0; b < totalBars; b++){
     const barStartTime = b * barDuration;
     const currentSec = state.songMode ? barSectionMap[b] : null;
 
     const keysActive = (!stemTrack || stemTrack === 'keys') && state.melodyAdded && !state.mix.keys.mute && (!state.songMode || currentSec?.active?.keys !== false);
-    const drumsActive = (!stemTrack || stemTrack === 'drums') && !state.mix.drums.mute && (!state.songMode || currentSec?.active?.drums !== false);
+    const drumsActive = (!stemTrack || stemTrack === 'drums') && state.drumsAdded && !state.mix.drums.mute && (!state.songMode || currentSec?.active?.drums !== false);
     const chordsActive = (!stemTrack || stemTrack === 'chords') && state.chordAdded && !state.mix.chords.mute && (!state.songMode || currentSec?.active?.chords !== false);
     const vocalsActive = (!stemTrack || stemTrack === 'vocals') && state.vocalAdded && !state.mix.vocals.mute && (!state.songMode || currentSec?.active?.vocals !== false);
 
@@ -3326,7 +3533,8 @@ async function renderAudioWav(stemTrack = null){
 }
 
 async function exportAllStems(){
-  const stems = ['drums'];
+  const stems = [];
+  if(state.drumsAdded) stems.push('drums');
   if(state.melodyAdded) stems.push('keys');
   if(state.chordAdded) stems.push('chords');
   if(state.vocalAdded && vocalBuffer) stems.push('vocals');
@@ -3362,7 +3570,7 @@ function exportMidi(){
   for (let barIndex = 0; barIndex < totalBars; barIndex++) {
     const barStart = barIndex * 1920;
 
-    state.pattern.forEach(note => {
+    if(state.melodyAdded) state.pattern.forEach(note => {
       const start = barStart + note.x * 120;
       const end = start + note.w * 120 - 15;
       events.push(
@@ -3382,7 +3590,7 @@ function exportMidi(){
         bass: { on: [0x92, 33, 105], off: [0x82, 33, 0] }
       };
 
-      for(const lane of lanes){
+      if(state.drumsAdded) for(const lane of lanes){
         if(state.drums[lane]?.has(s)){
           const roll = state.drumRolls?.[lane]?.[s] || 1;
           const info = drumMap[lane];
@@ -3444,6 +3652,8 @@ function handleJsonFile(e){
     try{
       const data=JSON.parse(evt.target.result);
       if(!data||typeof data!=='object') throw new Error('Invalid JSON');
+      if(data.id) state.id=data.id;
+      state.committed=true;
       if(data.name) state.name=data.name;
       if(data.bpm) state.bpm=Number(data.bpm)||92;
       if(data.key) state.key=data.key;
@@ -3460,6 +3670,8 @@ function handleJsonFile(e){
       if(data.vocalAdded!==undefined) state.vocalAdded=!!data.vocalAdded;
       if(data.mix) state.mix=data.mix;
       if(data.melodyAdded!==undefined) state.melodyAdded=!!data.melodyAdded;
+      if(data.idea!=null) state.idea=Number(data.idea)||0;
+      if(Array.isArray(data.melodyDrafts)&&data.melodyDrafts.length===4) state.melodyDrafts=data.melodyDrafts.map(list=>Array.isArray(list)?list.map(note=>({...note})):[]);
       if(data.drumPunch!==undefined) state.drumPunch=!!data.drumPunch;
       if(data.customSamples) state.customSamples=data.customSamples;
       if(data.fx) state.fx=data.fx;
@@ -3510,31 +3722,59 @@ async function openLibrary(initialTab='sounds'){const modal=document.querySelect
 async function startVocal(){
   try{
     const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-    vocalChunks=[];recorder=new MediaRecorder(stream);recorder.ondataavailable=event=>{if(event.data.size)vocalChunks.push(event.data)};
-    recorder.onstop=()=>{stream.getTracks().forEach(track=>track.stop());if(vocalUrl)URL.revokeObjectURL(vocalUrl);vocalUrl=URL.createObjectURL(new Blob(vocalChunks,{type:recorder.mimeType||'audio/webm'}));prepareVocalBuffer(vocalUrl);state.vocalAdded=true;saveProject();renderApp();notify('Vocal take captured')};
+    vocalChunks=[];
+    recorder=new MediaRecorder(stream);
+    recorder.ondataavailable=event=>{if(event.data.size) vocalChunks.push(event.data)};
+    recorder.onstop=()=>{
+      stream.getTracks().forEach(track=>track.stop());
+      const url=URL.createObjectURL(new Blob(vocalChunks,{type:recorder.mimeType||'audio/webm'}));
+      useVocalSource(url,'Recorded take');
+    };
     recorder.start();notify('Recording… click Stop when the line is done');
   }catch{notify('Microphone permission is needed to record')}
 }
 
-function applyIdea(index){
-  const scale=scaleForKey();
-  const base=state.pattern.map(note=>({...note}));
-  const variants=[
-    base,
-    base.map((note,i)=>({...note,n:scale[(i+1)%scale.length],x:(note.x+2)%15})),
-    base.map((note,i)=>({...note,n:scale[i%2?0:2],w:i%2?1:2})),
-    base.map((note,i)=>({...note,n:scale[(scale.length-1)-(i%scale.length)]})),
-    state.pattern,
-    state.pattern.map((note,i)=>({...note,n:['E5','D5','C5','A4'][i%4],x:(note.x+1)%15+1})),
-    state.pattern.map((note,i)=>({...note,n:i%2?'C5':'A4'})),
-    state.pattern.map((note,i)=>({...note,n:['A5','E5','G5','C5'][i%4]}))
-  ];
-  history.push(base);
-  history.push(state.pattern.map(note=>({...note})));
-  state.pattern=variants[index].map(note=>({...note}));
+function selectMelodyIdea(index){
+  rememberMelodyDraft();
+  const draft=state.melodyDrafts?.[index];
+  if(!draft?.length){
+    if(index===state.idea && state.pattern.length) return true;
+    notify('Generate a melody first');
+    return false;
+  }
+  history.push(cloneNotes(state.pattern));
+  future=[];
+  const changing=index!==state.idea;
   state.idea=index;
-  state.melodyAdded=true;saveProject();renderApp();scrollPianoToNotes();
-  state.melodyAdded=true;saveProject();renderPiano();
+  state.pattern=cloneNotes(draft);
+  if(changing) state.melodyAdded=false;
+  selectedNote=-1;
+  saveProject();
+  renderApp();
+  scrollPianoToNotes();
+  return true;
+}
+function commitMelody(){
+  if(!state.pattern.length){
+    notify('Generate or draw a melody first');
+    return;
+  }
+  rememberMelodyDraft();
+  state.melodyAdded=true;
+  saveProject();
+  renderApp();
+  notify('Melody added to the project');
+}
+function commitDrums(){
+  const hasHits=lanes.some(lane=>state.drums[lane]?.size);
+  if(!hasHits){
+    notify('Program a beat first');
+    return;
+  }
+  state.drumsAdded=true;
+  saveProject();
+  renderApp();
+  notify('Drums added to the project');
 }
 
 function cycleStepRoll(lane, step){
@@ -3553,24 +3793,123 @@ function cycleStepRoll(lane, step){
 }
 
 function onAction(target, event){
-  if(target.dataset.view){setView(target.dataset.view);return true}
-  if(target.dataset.open==='library'){openLibrary();return true}
-  if(target.dataset.open){setView(target.dataset.open);return true}
-  if(target.dataset.start){applyKit(target.dataset.start,true);state.chips=target.dataset.start==='rnb'?['R&B','Dark']:target.dataset.start==='acoustic'?['Smooth']:target.dataset.start==='trap'?['Dark']:['Simple'];saveProject();setView('drums');notify(`${sessionKits[state.kit].blurb} loaded`);return true}
-  if(target.dataset.kit&&sessionKits[target.dataset.kit]){applyKit(target.dataset.kit,true);markDrumsInProject();saveProject();renderApp();notify(`${sessionKits[state.kit].blurb} loaded`);return true}
-  if(target.dataset.chip){const chip=target.dataset.chip;state.chips=state.chips.includes(chip)?state.chips.filter(item=>item!==chip):[...state.chips,chip];saveProject();target.classList.toggle('selected');return true}
-  if(target.dataset.idea){applyIdea(Number(target.dataset.idea));document.querySelectorAll('.idea').forEach(el=>el.classList.remove('chosen'));target.closest('.idea').classList.add('chosen');return true}
-  if(target.dataset.chord){const option=(progressions[state.key]||[]).find(item=>item.name===target.dataset.chord);if(option){state.chords=option;saveProject();renderApp()}return true}
-  if(target.dataset.lyric){state.vocals={...state.vocals,title:target.dataset.lyric,line:target.dataset.line};saveProject();renderApp();return true}
-  if(target.dataset.loadVocal){useVocalSource(target.dataset.loadVocal,target.dataset.vocalTitle);return true}
-  if(target.id==='pick-vocal-file'){document.querySelector('#vocal-file-input')?.click();return true}
-  if(target.id==='clear-vocal'){if(vocalUrl?.startsWith('blob:')) URL.revokeObjectURL(vocalUrl);vocalUrl='';vocalBuffer=null;state.vocalAdded=false;saveProject();renderApp();notify('Vocal cleared');return true}
-  if(target.id==='lib-tab-sounds'||target.closest?.('#lib-tab-sounds')){setLibraryTab('sounds');return true}
-  if(target.id==='lib-tab-sources'||target.closest?.('#lib-tab-sources')){setLibraryTab('sources');return true}
-  if(target.dataset.chain){state.vocals={...state.vocals,chain:target.dataset.chain};saveProject();renderApp();return true}
-  if(target.dataset.lane){
-    const lane = target.dataset.lane;
-    const step = Number(target.dataset.step);
+  const el = sel => target?.closest ? target.closest(sel) : target?.parentElement?.closest?.(sel);
+
+  const viewBtn = el('[data-view]');
+  if(viewBtn){ setView(viewBtn.dataset.view); return true; }
+
+  const openBtn = el('[data-open]');
+  if(openBtn){
+    if(openBtn.dataset.open === 'library') openLibrary();
+    else setView(openBtn.dataset.open);
+    return true;
+  }
+
+  const startBtn = el('[data-start]');
+  if(startBtn){
+    applyKit(startBtn.dataset.start, true);
+    state.chips = startBtn.dataset.start === 'rnb' ? ['R&B', 'Dark'] : startBtn.dataset.start === 'acoustic' ? ['Smooth'] : startBtn.dataset.start === 'trap' ? ['Dark'] : ['Simple'];
+    saveProject();
+    setView('drums');
+    notify(`${sessionKits[state.kit].blurb} loaded`);
+    return true;
+  }
+
+  const kitBtn = el('[data-kit]');
+  if(kitBtn && sessionKits[kitBtn.dataset.kit]){
+    applyKit(kitBtn.dataset.kit, true);
+    saveProject();
+    renderApp();
+    notify(state.drumsAdded?`${sessionKits[state.kit].blurb} loaded.`:`${sessionKits[state.kit].blurb} loaded. Add drums when the pocket is right.`);
+    return true;
+  }
+
+  const chipBtn = el('[data-chip]');
+  if(chipBtn){
+    const chip = chipBtn.dataset.chip;
+    state.chips = state.chips.includes(chip) ? state.chips.filter(item => item !== chip) : [...state.chips, chip];
+    saveProject();
+    chipBtn.classList.toggle('selected');
+    return true;
+  }
+
+  const addMelodyBtn = el('[data-add-melody]');
+  if(addMelodyBtn){
+    const index = Number(addMelodyBtn.dataset.addMelody);
+    if(Number.isNaN(index) || !selectMelodyIdea(index)) return true;
+    commitMelody();
+    return true;
+  }
+
+  const ideaBtn = el('[data-idea]');
+  if(ideaBtn){
+    selectMelodyIdea(Number(ideaBtn.dataset.idea));
+    return true;
+  }
+
+  const chordBtn = el('[data-chord]');
+  if(chordBtn){
+    const option = (progressions[state.key] || []).find(item => item.name === chordBtn.dataset.chord);
+    if(option){
+      state.chords = option;
+      state.chordAdded = false;
+      saveProject();
+      renderApp();
+    }
+    return true;
+  }
+
+  const lyricBtn = el('[data-lyric]');
+  if(lyricBtn){
+    state.vocals = { ...state.vocals, title: lyricBtn.dataset.lyric, line: lyricBtn.dataset.line };
+    saveProject();
+    renderApp();
+    return true;
+  }
+
+  const loadVocalBtn = el('[data-load-vocal]');
+  if(loadVocalBtn){
+    useVocalSource(loadVocalBtn.dataset.loadVocal, loadVocalBtn.dataset.vocalTitle);
+    return true;
+  }
+
+  const pickVocalFileBtn = el('#pick-vocal-file');
+  if(pickVocalFileBtn){
+    document.querySelector('#vocal-file-input')?.click();
+    return true;
+  }
+
+  const clearVocalBtn = el('#clear-vocal');
+  if(clearVocalBtn){
+    if(vocalUrl?.startsWith('blob:')) URL.revokeObjectURL(vocalUrl);
+    vocalUrl = '';
+    vocalBuffer = null;
+    state.vocals = { ...state.vocals, url: '' };
+    state.vocalAdded = false;
+    saveProject();
+    renderApp();
+    notify('Vocal cleared');
+    return true;
+  }
+
+  const libTabSoundsBtn = el('#lib-tab-sounds');
+  if(libTabSoundsBtn){ setLibraryTab('sounds'); return true; }
+
+  const libTabSourcesBtn = el('#lib-tab-sources');
+  if(libTabSourcesBtn){ setLibraryTab('sources'); return true; }
+
+  const chainBtn = el('[data-chain]');
+  if(chainBtn){
+    state.vocals = { ...state.vocals, chain: chainBtn.dataset.chain };
+    saveProject();
+    renderApp();
+    return true;
+  }
+
+  const laneStepBtn = el('[data-lane]');
+  if(laneStepBtn){
+    const lane = laneStepBtn.dataset.lane;
+    const step = Number(laneStepBtn.dataset.step);
     if(event?.shiftKey && state.drums[lane]?.has(step)){
       cycleStepRoll(lane, step);
       return true;
@@ -3581,16 +3920,19 @@ function onAction(target, event){
     } else {
       state.drums[lane].add(step);
     }
-    markDrumsInProject();
     saveProject();
     renderApp();
     return true;
   }
-  if(target.id==='open-public-sources'||target.closest?.('#open-public-sources')||target.id==='lead-open-sources'){
+
+  const openSourcesBtn = el('#open-public-sources') || el('#lead-open-sources');
+  if(openSourcesBtn){
     openLibrary('sources');
     return true;
   }
-  if(target.id==='toggle-master-limiter'||target.closest?.('#toggle-master-limiter')){
+
+  const toggleLimiterBtn = el('#toggle-master-limiter');
+  if(toggleLimiterBtn){
     state.masterLimiter = !(state.masterLimiter !== false);
     updateMasterLimiter();
     saveProject();
@@ -3598,14 +3940,18 @@ function onAction(target, event){
     notify(state.masterLimiter ? 'Master Limiter & Maximizer enabled (-0.8dB Peak · +2.8dB Boost)' : 'Master Limiter bypassed (Clean headroom)');
     return true;
   }
-  if(target.id==='toggle-sidechain'||target.closest?.('#toggle-sidechain')){
+
+  const toggleSidechainBtn = el('#toggle-sidechain');
+  if(toggleSidechainBtn){
     state.sidechain = !(state.sidechain !== false);
     saveProject();
     renderApp();
     notify(state.sidechain ? 'Kick Sidechain Ducking enabled (Chords & Bass pump on kicks)' : 'Kick Sidechain bypassed (Flat)');
     return true;
   }
-  if(target.id==='reset-eq'||target.closest?.('#reset-eq')){
+
+  const resetEqBtn = el('#reset-eq');
+  if(resetEqBtn){
     state.eq = { low: 0, mid: 0, high: 0 };
     updateEQ();
     saveProject();
@@ -3613,36 +3959,85 @@ function onAction(target, event){
     notify('Master EQ reset to Flat (0 dB)');
     return true;
   }
-  if(target.dataset.mute){state.mix[target.dataset.mute].mute=!state.mix[target.dataset.mute].mute;saveProject();renderApp();return true}
-  if(target.id==='generate'||target.id==='regenerate'||target.closest?.('#generate')){const prompt=document.querySelector('#prompt');if(prompt)state.prompt=prompt.value;generateMelody();return true}
-  if(target.id==='humanize-drums'){generateDrums();return true}
-  if(target.id==='generate-chords'){generateChords();return true}
-  if(target.id==='add-chords'){state.chordAdded=true;saveProject();renderApp();notify('Chords added to the arrangement');return true}
-  if(target.id==='generate-vocals'){generateVocals();return true}
-  if(target.id==='add-vocal'){state.vocalAdded=true;saveProject();renderApp();notify('Vocal track added');return true}
-  if(target.id==='record-vocal'){startVocal();return true}
-  if(target.id==='stop-vocal'){if(recorder&&recorder.state==='recording')recorder.stop();return true}
-  if(target.id==='play-vocal'){playVocalOnce();return true}
-  if(target.id==='add-project'||target.dataset.addMelody!==undefined){state.melodyAdded=true;saveProject();notify('Melody added to the project');return true}
-  if(target.id==='preview'){setPlaying(!playing);return true}
-  if(target.dataset.inst){
-    state.instrument=target.dataset.inst;
+
+  const muteBtn = el('[data-mute]');
+  if(muteBtn){
+    state.mix[muteBtn.dataset.mute].mute = !state.mix[muteBtn.dataset.mute].mute;
+    saveProject();
+    renderApp();
+    return true;
+  }
+
+  if(el('#regenerate')){ generateMelody(true); return true; }
+  if(el('#generate')){
+    const prompt = document.querySelector('#prompt');
+    if(prompt) state.prompt = prompt.value;
+    generateMelody(false);
+    return true;
+  }
+  if(el('#humanize-drums')){ generateDrums(); return true; }
+  if(el('#add-drums')){ commitDrums(); return true; }
+  if(el('#generate-chords')){ generateChords(); return true; }
+  if(el('#add-chords')){ state.chordAdded = true; saveProject(); renderApp(); notify('Chords added to the arrangement'); return true; }
+  if(el('#generate-vocals')){ generateVocals(); return true; }
+  if(el('#add-vocal')){
+    if(!vocalUrl && !vocalBuffer){ notify('Load or record a vocal first'); return true; }
+    state.vocalAdded = true;
+    saveProject();
+    renderApp();
+    notify('Vocal track added');
+    return true;
+  }
+  if(el('#record-vocal')){ startVocal(); return true; }
+  if(el('#stop-vocal')){ if(recorder && recorder.state === 'recording') recorder.stop(); return true; }
+  if(el('#play-vocal')){ playVocalOnce(); return true; }
+  if(el('#add-project')){ commitMelody(); return true; }
+  if(el('#preview')){ setPlaying(!playing); return true; }
+
+  const instBtn = el('[data-inst]');
+  if(instBtn){
+    state.instrument = instBtn.dataset.inst;
     triggerSoundfontLoad(state.instrument);
     saveProject();
     renderApp();
-    tone('C5',.45,.12,state.instrument);
-    const instNames={rhodes:'Neo-Soul Rhodes',piano:'Acoustic Grand Piano',guitar:'FluidR3 Acoustic Guitar',strings:'FluidR3 Strings Ensemble',bass:'808 Sub Bass',brass:'80s Synth Brass',organ:'FluidR3 Church Organ',flute:'FluidR3 Concert Flute',pad:'Lofi Ambient Pad',analog:'Analog Poly',pluck:'Crystal Pluck'};
-    notify(`${instNames[state.instrument]||'Keyboard'} loaded`);
+    tone('C5', 0.45, 0.12, state.instrument);
+    const instNames = { rhodes: 'Rhodes', piano: 'Piano', guitar: 'Guitar', strings: 'Strings', bass: 'Bass', brass: 'Brass', organ: 'Organ', flute: 'Flute', pad: 'Pad', analog: 'Analog', pluck: 'Pluck' };
+    notify(`${instNames[state.instrument] || 'Keys'} loaded`);
     return true;
   }
-  if(target.id==='export-midi'){exportMidi();return true}
-  if(target.id==='export-json'){saveProject();exportJson();return true}
-  if(target.id==='import-json'||target.id==='import-json-settings'){importJson();return true}
-  if(target.dataset.openProject){openProject(target.dataset.openProject);return true}
-  if(target.id==='create-project'){createProject();return true}
-  if(target.id==='save-settings'){const nextKey=document.querySelector('#settings-key').value;state.name=document.querySelector('#settings-name').value||'Untitled idea';state.description=document.querySelector('#settings-description')?.value.trim()||state.description;state.bpm=Number(document.querySelector('#settings-bpm').value)||92;if(nextKey!==state.key){const from=scaleForKey(state.key);const to=scaleForKey(nextKey);state.pattern=state.pattern.map(note=>{let degree=from.indexOf(note.n);if(degree<0){const pitch=pitchOf(note.n);degree=from.reduce((best,name,index)=>Math.abs(pitchOf(name)-pitch)<Math.abs(pitchOf(from[best])-pitch)?index:best,0)}return {...note,n:to[degree]}});state.key=nextKey;state.chords=(progressions[nextKey]||[]).find(item=>item.name===state.chords.name)||progressions[nextKey][0]}saveProject();renderApp();notify('Project settings saved');return true}
-  if(target.id==='new-idea'){setView('home');notify('Create the next project at the top of the list');return true}
-  if(target.id==='close-inspector'){setInspectorOpen(false);return true}
+
+  if(el('#export-midi')){ if(!projectHasMusic()){ notify('Add a part to this project before exporting'); return true; } exportMidi(); return true; }
+  if(el('#export-json')){ saveProject(); exportJson(); return true; }
+  if(el('#import-json') || el('#import-json-settings')){ importJson(); return true; }
+  const openProjBtn = el('[data-open-project]');
+  if(openProjBtn){ openProject(openProjBtn.dataset.openProject); return true; }
+  if(el('#create-project')){ createProject(); return true; }
+  if(el('#save-settings')){
+    const nextKey=document.querySelector('#settings-key').value;
+    state.name=document.querySelector('#settings-name').value||'Untitled idea';
+    state.description=document.querySelector('#settings-description')?.value.trim()||state.description;
+    state.bpm=Number(document.querySelector('#settings-bpm').value)||92;
+    if(nextKey!==state.key){
+      const from=scaleForKey(state.key);
+      const to=scaleForKey(nextKey);
+      state.pattern=state.pattern.map(note=>{
+        let degree=from.indexOf(note.n);
+        if(degree<0){
+          const pitch=pitchOf(note.n);
+          degree=from.reduce((best,name,index)=>Math.abs(pitchOf(name)-pitch)<Math.abs(pitchOf(from[best])-pitch)?index:best,0);
+        }
+        return {...note,n:to[degree]};
+      });
+      state.key=nextKey;
+      state.chords=(progressions[nextKey]||[]).find(item=>item.name===state.chords.name)||progressions[nextKey][0];
+    }
+    saveProject();
+    renderApp();
+    notify('Project settings saved');
+    return true;
+  }
+  if(el('#new-idea')){ startNewIdea(); return true; }
+  if(el('#close-inspector')){ setInspectorOpen(false); return true; }
   if(target.id==='toggle-drum-punch'||target.closest?.('#toggle-drum-punch')){
     state.drumPunch=!(state.drumPunch!==false);
     updateDrumBusRouting();
@@ -3690,6 +4085,7 @@ function onAction(target, event){
     }
   }
   if(target.id==='export-wav-master'||target.closest?.('#export-wav-master')){
+    if(!projectHasMusic()){ notify('Add a part to this project before exporting'); return true; }
     const btn = target.closest('#export-wav-master') || target;
     btn.disabled = true;
     btn.textContent = 'Rendering WAV...';
@@ -3706,6 +4102,7 @@ function onAction(target, event){
     return true;
   }
   if(target.id==='export-wav-stems'||target.closest?.('#export-wav-stems')){
+    if(!projectHasMusic()){ notify('Add a part to this project before exporting'); return true; }
     const btn = target.closest('#export-wav-stems') || target;
     btn.disabled = true;
     btn.textContent = 'Rendering Stems...';
@@ -3759,7 +4156,7 @@ document.querySelector('#go-export').addEventListener('click',()=>setView('expor
 document.querySelector('#go-account').addEventListener('click',()=>setView('settings'));
 document.querySelector('#play').addEventListener('click',()=>setPlaying(!playing));
 document.querySelector('#stop').addEventListener('click',()=>setPlaying(false));
-document.querySelector('#undo').addEventListener('click',()=>{if(!history.length)return;future.push(state.pattern.map(note=>({...note})));state.pattern=history.pop();saveProject();renderPiano();notify('Undid note edit')});
+document.querySelector('#undo').addEventListener('click',()=>{if(!history.length)return;future.push(state.pattern.map(note=>({...note})));state.pattern=history.pop();rememberMelodyDraft();saveProject();renderPiano();notify('Undid note edit')});
 document.querySelector('#bpm').addEventListener('change',event=>{state.bpm=Number(event.target.value)||92;saveProject();if(playing)setPlaying(true)});
 document.querySelector('#swing').addEventListener('change',event=>{state.swing=Math.max(0,Math.min(60,Number(event.target.value)||0));saveProject();if(playing)setPlaying(true);notify(`Swing set to ${state.swing}%`)});
 document.querySelector('#key').addEventListener('click',event=>{event.stopPropagation();const list=document.querySelector('#key-list');setKeyMenuOpen(list.hidden)});
@@ -3884,7 +4281,7 @@ document.querySelector('#stage').addEventListener('input',event=>{
   }
 });
 document.querySelector('.tools').addEventListener('click',event=>{const button=event.target.closest('[data-view], .library, .settings');if(!button)return;if(button.classList.contains('library'))openLibrary();else if(button.dataset.view)setView(button.dataset.view)});
-document.querySelectorAll('[data-roll]').forEach(button=>button.addEventListener('click',()=>{if(button.dataset.roll==='undo'&&history.length){future.push(state.pattern.map(note=>({...note})));state.pattern=history.pop();renderPiano();notify('Undid note edit')}else if(button.dataset.roll==='redo'&&future.length){history.push(state.pattern.map(note=>({...note})));state.pattern=future.pop();renderPiano();notify('Redid note edit')}else notify(button.dataset.roll==='snap'?'Snap set to 1/16':'Nothing to change')}));
+document.querySelectorAll('[data-roll]').forEach(button=>button.addEventListener('click',()=>{if(button.dataset.roll==='undo'&&history.length){future.push(state.pattern.map(note=>({...note})));state.pattern=history.pop();rememberMelodyDraft();renderPiano();notify('Undid note edit')}else if(button.dataset.roll==='redo'&&future.length){history.push(state.pattern.map(note=>({...note})));state.pattern=future.pop();rememberMelodyDraft();renderPiano();notify('Redid note edit')}else notify(button.dataset.roll==='snap'?'Snap set to 1/16':'Nothing to change')}));
 document.querySelector('#close-library').addEventListener('click',()=>document.querySelector('#library-modal').hidden=true);
 document.querySelector('#library-search').addEventListener('input',event=>{query=event.target.value;if(catalog)renderLibrary()});
 document.querySelector('#library-modal').addEventListener('click',event=>{
@@ -3893,7 +4290,7 @@ document.querySelector('#library-modal').addEventListener('click',event=>{
   const pack=event.target.closest('[data-pack]');const group=event.target.closest('[data-group]');const kit=event.target.closest('[data-kit]');const sound=event.target.closest('.sound-preview');
   if(pack){packId=pack.dataset.pack;groupId=currentPack().groups[0].id;query='';document.querySelector('#library-search').value='';renderLibrary()}
   else if(group){groupId=group.dataset.group;query='';document.querySelector('#library-search').value='';renderLibrary()}
-  else if(kit){applyKit(kit.dataset.kit,true);saveProject();renderApp();notify(`${sessionKits[state.kit].blurb} loaded`)}
+  else if(kit){applyKit(kit.dataset.kit,true);saveProject();renderApp();notify(state.drumsAdded?`${sessionKits[state.kit].blurb} loaded.`:`${sessionKits[state.kit].blurb} loaded. Add drums when the pocket is right.`)}
   else if(sound) playPreview(sound);
 });
 
@@ -4064,6 +4461,7 @@ window.addEventListener('keyup', event => {
   }
 });
 
-window.addEventListener('hashchange',()=>{const view=location.hash.slice(1);if(views.includes(view)&&view!==state.view){state.view=view;renderApp()}});
+window.addEventListener('hashchange',()=>{const view=location.hash.slice(1)||'home';if(views.includes(view)&&view!==state.view) setView(view)});
+if(!state.committed && location.hash.slice(1) && location.hash.slice(1)!=='home') location.hash='home';
+if(saved?.id) saveProject();
 renderApp();
-if(saved) saveProject();

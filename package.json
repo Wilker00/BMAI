@@ -2,6 +2,7 @@
   "name": "bmai-mvp",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "catalog": "node scripts/generate-sound-catalog.mjs",
     "dev": "npm run catalog && vite",

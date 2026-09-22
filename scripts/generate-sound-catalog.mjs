@@ -61,11 +61,18 @@ const djToolsPack = {
       id: 'drops',
       name: 'Vocal Drops & Hype',
       sounds: [
-        { name: 'Vocal Check This Out', url: '/sounds/stargate/microlag/One-Shots/Vocals/Vocal_Check_This_Out.wav' },
-        { name: 'One Two Three Let\'s Go', url: '/sounds/stargate/microlag/One-Shots/Vocals/One_Two_Three_Let\'s_Go.wav' },
-        { name: 'Word Up', url: '/sounds/stargate/microlag/One-Shots/Vocals/Word_Up.wav' },
-        { name: 'That\'s Insane', url: '/sounds/stargate/microlag/One-Shots/Vocals/That\'s_Insane.wav' },
-        { name: 'December Drop', url: '/sounds/stargate/microlag/One-Shots/Vocals/December.wav' }
+        { name: 'Life Goes On (Melodic Hook)', url: '/sounds/stargate/microlag/One-Shots/Vocals/Life_Goes_On.wav' },
+        { name: 'Fantastic (Smooth Lead)', url: '/sounds/stargate/microlag/One-Shots/Vocals/Fantastic.wav' },
+        { name: 'December (R&B Singing)', url: '/sounds/stargate/microlag/One-Shots/Vocals/December.wav' },
+        { name: "I Hope It's Not Over (Refrain)", url: "/sounds/stargate/microlag/One-Shots/Vocals/I_Hope_It's_Not_Over.wav" },
+        { name: "One Two Three Let's Go (Hype)", url: "/sounds/stargate/microlag/One-Shots/Vocals/One_Two_Three_Let's_Go.wav" },
+        { name: 'Check This Out (DJ Drop)', url: '/sounds/stargate/microlag/One-Shots/Vocals/Vocal_Check_This_Out.wav' },
+        { name: 'Word Up (DJ Shout)', url: '/sounds/stargate/microlag/One-Shots/Vocals/Word_Up.wav' },
+        { name: 'Praise The Lord (Gospel Hook)', url: '/sounds/stargate/microlag/One-Shots/Vocals/Praise_The_Lord.wav' },
+        { name: "That's Insane (Energy Shout)", url: "/sounds/stargate/microlag/One-Shots/Vocals/That's_Insane.wav" },
+        { name: 'Pretty Cool (Chill Phrase)', url: '/sounds/stargate/microlag/One-Shots/Vocals/Pretty_Cool.wav' },
+        { name: 'Excuse Me (Transition)', url: '/sounds/stargate/microlag/One-Shots/Vocals/Excuse_Me.wav' },
+        { name: 'Shine Muscat (Catchphrase)', url: '/sounds/stargate/microlag/One-Shots/Vocals/Shine_Muscat_Is_Bussin.wav' }
       ]
     },
     {
