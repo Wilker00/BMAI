@@ -277,6 +277,10 @@ const defaultDrums = () => ({
 });
 
 function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));}
+function icon(name, extra=''){
+  return `<span class="material-symbols-outlined ico${extra?' '+extra:''}" aria-hidden="true">${name}</span>`;
+}
+const trackIconName = { keys:'music_note', drums:'album', chords:'piano', vocals:'mic' };
 function loadProject(){try{return JSON.parse(localStorage.getItem('bmai-project'))}catch{return null}}
 const saved = loadProject();
 
@@ -1717,7 +1721,54 @@ function startNewIdea(){
   localStorage.removeItem('bmai-project');
   applyKit('rnb',true);
   setView('home');
-  notify('Name the next project, then create it.');
+  notify('Create a project to start.');
+}
+function nameFromPrompt(prompt){
+  const words=String(prompt||'').split(/[\s,]+/).filter(Boolean).slice(0,4);
+  if(!words.length) return 'Untitled idea';
+  return words.map(word=>word.charAt(0).toUpperCase()+word.slice(1)).join(' ').slice(0,42);
+}
+function generateStarter(){
+  const prompt=document.querySelector('#feeling-prompt')?.value.trim()||'late-night R&B, warm and a little dark';
+  const key=document.querySelector('#feeling-key')?.value||'A minor';
+  const bpm=Math.max(40,Math.min(240,Number(document.querySelector('#feeling-bpm')?.value)||92));
+  const kit=sessionKits[document.querySelector('#feeling-kit')?.value]?document.querySelector('#feeling-kit').value:'rnb';
+  if(playing) setPlaying(false);
+  history=[]; future=[];
+  selectedNote=-1;
+  createKit=kit;
+  state.id=crypto.randomUUID();
+  state.prompt=prompt;
+  state.name=nameFromPrompt(prompt);
+  state.description=prompt;
+  state.bpm=bpm;
+  state.key=keyScales[key]?key:'A minor';
+  state.chips=['R&B'];
+  state.idea=0;
+  state.instrument='rhodes';
+  state.chords=(progressions[state.key]||progressions['A minor'])[0];
+  state.chordAdded=false;
+  state.vocalAdded=false;
+  state.drumRolls={};
+  state.customSamples={kick:'',snare:'',clap:'',hat:'',openhat:'',bass:''};
+  state.mix=defaultMix();
+  state.songMode=false;
+  state.songSection=0;
+  if(vocalUrl && vocalUrl.startsWith('blob:')) URL.revokeObjectURL(vocalUrl);
+  vocalUrl='';
+  vocalBuffer=null;
+  state.vocals={title:'Soft hook',line:'keep the night close, don’t say it loud',chain:'Modern R&B'};
+  const scale=scaleForKey(state.key);
+  state.melodyDrafts=[0,1,2,3].map(style=>buildMelodyPhrase(scale, style));
+  state.pattern=cloneNotes(state.melodyDrafts[0]);
+  state.melodyAdded=true;
+  state.committed=true;
+  applyKit(kit,true);
+  state.drumsAdded=true;
+  saveProject();
+  setView('home');
+  setPlaying(true);
+  notify('Starter loop ready. Change a lane, or add chords and vocals.');
 }
 function applyKit(id,resetSteps=false){
   const kit=sessionKits[id]; if(!kit) return;
@@ -1737,7 +1788,7 @@ applyKit(state.kit);
 function notify(msg){const toast=document.querySelector('.toast');toast.textContent=msg;toast.classList.add('show');clearTimeout(notify.t);notify.t=setTimeout(()=>toast.classList.remove('show'),2200)}
 function setView(view){
   if(view!=='home' && !state.committed){
-    notify('Create a project first');
+    notify('Generate a loop first');
     if(state.view!=='home'){
       state.view='home';
       renderApp();
@@ -1764,8 +1815,6 @@ function applyStudioLayout(){
   shell.dataset.layout=phone?'stack':wide?'wide':'studio';
   toggle.setAttribute('aria-expanded',String(studioNav.open));
   toggle.setAttribute('aria-label',studioNav.open?'Hide studio panel':'Show studio panel');
-  const mark=toggle.querySelector('span');
-  if(mark) mark.textContent=studioNav.open?'‹':'›';
   const inspector=document.querySelector('#inspector');
   shell.classList.toggle('inspector-closed',!inspectorPane.open&&!phone&&!wide);
   if(inspector){
@@ -1941,6 +1990,7 @@ function generateMelody(onlyCurrent=false){
   saveProject();
   renderApp();
   scrollPianoToNotes();
+  setPlaying(true);
 }
 function generateDrums(){
   if(typeof pushDrumHistory === 'function') pushDrumHistory();
@@ -1974,10 +2024,10 @@ app.innerHTML=`
     <header class="topbar">
       <button class="brand" id="go-home" type="button"><span class="brand-mark">B</span><span>BMAI</span><small>STUDIO</small></button>
       <div class="project"><span class="project-dot"></span><strong id="project-title">Untitled idea</strong><span>Saved just now</span></div>
-      <div class="top-actions"><button class="icon-btn" id="undo" title="Undo">↶</button><button class="outline-btn" id="go-export">Export</button><button class="avatar" id="go-account">BM</button></div>
+      <div class="top-actions"><button class="icon-btn" id="undo" title="Undo">${icon('undo')}</button><button class="outline-btn" id="go-export">${icon('ios_share')} Export</button><button class="avatar" id="go-account">BM</button></div>
     </header>
     <section class="transport">
-      <div class="transport-controls"><button class="round" id="play" aria-label="Play">▶</button><button class="stop" id="stop" aria-label="Stop">■</button><span class="bar-count" title="Bar, beat, step">1 · 1 · 1</span></div>
+      <div class="transport-controls"><button class="round" id="play" aria-label="Play">${icon('play_arrow')}</button><button class="stop" id="stop" aria-label="Stop">${icon('stop')}</button><span class="bar-count" title="Bar, beat, step">1 · 1 · 1</span></div>
       <div class="tempo">
         <label>BPM <input id="bpm" type="number" min="40" max="240" value="92" /></label>
         <button type="button" class="tap-tempo-btn" id="tap-tempo" title="Click rhythmically to set BPM">TAP</button>
@@ -1990,30 +2040,28 @@ app.innerHTML=`
         <span class="divider"></span>
         <label title="MPC 16th swing groove">SWING <input id="swing" type="number" min="0" max="60" value="18" style="width:36px;" />%</label>
         <span class="divider"></span>
-        <button class="metronome" id="metronome" type="button">♩</button>
+        <button class="metronome" id="metronome" type="button" title="Metronome">${icon('timer')}</button>
       </div>
       <div class="transport-right">
-        <div class="qwerty-indicator" id="qwerty-indicator" title="Play live using computer keyboard A-L (white) and W-O (black). Z/X shifts octave.">⌨ <span id="qwerty-oct">C4-D5</span></div>
-        <span class="divider"></span>
         <canvas id="audio-visualizer" class="spectrum-canvas" width="105" height="24" title="Real-time Audio Spectrum Visualizer"></canvas>
         <span class="divider"></span>
         <span class="meter-chip">4/4</span>
       </div>
     </section>
-    <button class="nav-toggle" id="nav-toggle" type="button" aria-controls="studio-nav" aria-expanded="true"><span aria-hidden="true">‹</span></button>
+    <button class="nav-toggle" id="nav-toggle" type="button" aria-controls="studio-nav" aria-expanded="true">${icon('chevron_left')}</button>
     <div class="workspace">
       <aside class="tools" id="studio-nav">
-        <div class="sidebar-title">Studio <span>✦</span></div>
-        <button class="tool" data-view="home"><i>□</i><span>Projects</span><small>home</small></button>
-        <button class="tool" data-view="melody"><i>⌁</i><span>Melody</span><small>inside</small></button>
-        <button class="tool" data-view="drums"><i>◌</i><span>Drums</span><small>inside</small></button>
-        <button class="tool" data-view="chords"><i>⌗</i><span>Chords</span><small>inside</small></button>
-        <button class="tool" data-view="vocals"><i>◒</i><span>Vocals</span><small>inside</small></button>
+        <div class="sidebar-title">Studio</div>
+        <button class="tool" data-view="home">${icon('folder')}<span>Projects</span><small>home</small></button>
+        <button class="tool" data-view="melody">${icon('music_note')}<span>Melody</span><small>inside</small></button>
+        <button class="tool" data-view="drums">${icon('album')}<span>Drums</span><small>inside</small></button>
+        <button class="tool" data-view="chords">${icon('piano')}<span>Chords</span><small>inside</small></button>
+        <button class="tool" data-view="vocals">${icon('mic')}<span>Vocals</span><small>inside</small></button>
         <div class="sidebar-bottom">
-          <button class="library">▣ &nbsp; Library</button>
-          <button class="nav-link" data-view="mix">🎚 &nbsp; Mix</button>
-          <button class="nav-link" data-view="export">↗ &nbsp; Export</button>
-          <button class="settings" data-view="settings">⚙ &nbsp; Settings</button>
+          <button class="library">${icon('library_music')} Library</button>
+          <button class="nav-link" data-view="mix">${icon('equalizer')} Mix</button>
+          <button class="nav-link" data-view="export">${icon('ios_share')} Export</button>
+          <button class="settings" data-view="settings">${icon('settings')} Settings</button>
         </div>
       </aside>
       <section class="main-stage" id="stage"></section>
@@ -2030,22 +2078,21 @@ app.innerHTML=`
       <div class="piano-header">
         <div>
           <p class="piano-kicker"><span class="piano-dot"></span>PIANO ROLL</p>
-          <strong id="piano-label">Keys · AI Melody 01</strong>
-          <p class="piano-hint" title="Drag a note to move it. Drag the bright edge to change length. Click empty grid to add. Remove deletes the selected note.">Drag a note to move it. Drag the bright edge to change length. Click empty grid to add. Remove deletes the selected note.</p>
+          <strong id="piano-label">Keys · Moonlit · 1 bar</strong>
         </div>
         <div class="piano-tools">
-          <div class="piano-selected" id="piano-selected">Click a note to edit it</div>
+          <div class="piano-selected" id="piano-selected">No note</div>
           <button class="ghost" id="remove-note" type="button" disabled>Remove</button>
           <select id="piano-inst" class="piano-inst-select" title="Change instrument"><option value="rhodes">Rhodes</option><option value="piano">Piano</option><option value="guitar">Guitar</option><option value="strings">Strings</option><option value="bass">Bass</option><option value="brass">Brass</option><option value="organ">Organ</option><option value="flute">Flute</option><option value="pad">Pad</option><option value="analog">Analog</option><option value="pluck">Pluck</option></select>
-          <button class="ghost" data-roll="undo" type="button">Undo</button>
-          <button class="ghost" data-roll="redo" type="button">Redo</button>
+          <button class="ghost" data-roll="undo" type="button">${icon('undo')} Undo</button>
+          <button class="ghost" data-roll="redo" type="button">${icon('redo')} Redo</button>
         </div>
       </div>
       <div class="roll-ruler" aria-hidden="true"><span class="ruler-key">KEY</span><div class="roll-beats"><span>Beat 1</span><span>Beat 2</span><span>Beat 3</span><span>Beat 4</span></div></div>
       <div class="piano-wrap" id="piano-wrap"><div class="keyboard" id="keyboard"></div><div class="grid" id="grid"><div class="playhead" id="playhead"></div></div></div>
     </section>
     <footer><span id="status-line"><b>Ready</b> · Local MVP session</span><span>Press <kbd>Space</kbd> to play</span></footer>
-    <div class="library-modal" id="library-modal" hidden><div class="library-card"><div class="library-head"><div><span>CURATED FACTORY LIBRARY</span><h2 id="library-count">CC0 sound library</h2></div><button id="close-library">×</button></div><div class="library-tabs"><button type="button" class="lib-tab active" id="lib-tab-sounds">Factory Sounds &amp; Kits</button><button type="button" class="lib-tab" id="lib-tab-sources">Free Public Sources</button></div><div id="lib-view-sounds"><p>Production-ready drums, basses, loops and textures. Preview any sound or load a beat kit.</p><div class="kit-row"><span>Beat style</span><button type="button" data-kit="rnb" class="on">R&amp;B</button><button type="button" data-kit="house">House</button><button type="button" data-kit="trap">Trap</button><button type="button" data-kit="dnb">Drum &amp; bass</button><button type="button" data-kit="acoustic">Acoustic</button><button type="button" data-kit="dj">DJ Set</button></div><div class="library-tools"><input id="library-search" type="search" placeholder="Search kicks, bass, pads, breaks…" aria-label="Search sounds" /></div><div class="pack-row" id="pack-row"></div><div class="group-row" id="group-row"></div><div class="sound-groups" id="sound-groups"></div><div class="library-meta"><span id="library-status"></span><span>CC0 only · novelty effects excluded</span></div></div><div id="lib-view-sources" hidden><div class="sources-intro"><h3>Download free packs, scratches, and instruments</h3><p>Grab a royalty-free pack, then drop the wav or mp3 onto a drum lane, or pick Guitar, Strings, Organ, Flute, or Grand Piano in the piano roll.</p></div><div class="sources-grid"><div class="source-card"><div class="source-header"><h4>SampleRadar</h4><span class="source-badge">75,000+ SAMPLES</span></div><p>Royalty-free drums, breaks, 808s, and vintage keys.</p><div class="source-actions"><a class="source-link-btn" href="https://www.musicradar.com/news/tech/free-music-samples-royalty-free-loops-hits-and-multis-to-download" target="_blank" rel="noopener">Visit SampleRadar ↗</a></div></div><div class="source-card"><div class="source-header"><h4>Freesound CC0</h4><span class="source-badge cc0">CC0</span></div><p>Public-domain scratches, vocal chants, and drum machines.</p><div class="source-actions"><a class="source-link-btn" href="https://freesound.org/search/?q=license:creative_commons_0" target="_blank" rel="noopener">Search Freesound ↗</a></div></div><div class="source-card"><div class="source-header"><h4>Internet Archive</h4><span class="source-badge archive">ARCHIVE</span></div><p>Historic breaks, funk drums, and public-domain recordings.</p><div class="source-actions"><a class="source-link-btn" href="https://archive.org/details/audio" target="_blank" rel="noopener">Open Archive ↗</a></div></div><div class="source-card"><div class="source-header"><h4>FluidR3 GM</h4><span class="source-badge soundfont">128 INSTRUMENTS</span></div><p>Sampled guitar, strings, organ, and flute already playable in the piano roll.</p><div class="source-actions"><a class="source-link-btn" href="https://github.com/gleitz/midi-js-soundfonts" target="_blank" rel="noopener">View soundfonts ↗</a></div></div><div class="source-card"><div class="source-header"><h4>ccMixter &amp; Looperman</h4><span class="source-badge" style="background:#2d1b38;color:#ff9bd8;">FREE VOCALS</span></div><p>Over 30,000 royalty-free vocal acapellas, singing lines, and rap verses for BMAI AI Vocals.</p><div class="source-actions"><a class="source-link-btn" href="https://ccmixter.org/browse" target="_blank" rel="noopener">ccMixter ↗</a><a class="source-link-btn" href="https://www.looperman.com/acapellas" target="_blank" rel="noopener" style="margin-left:6px;">Looperman ↗</a></div></div></div></div></div></div>
+    <div class="library-modal" id="library-modal" hidden><div class="library-card"><div class="library-head"><div><span>CURATED FACTORY LIBRARY</span><h2 id="library-count">CC0 sound library</h2></div><button id="close-library">${icon('close')}</button></div><div class="library-tabs"><button type="button" class="lib-tab active" id="lib-tab-sounds">Factory Sounds &amp; Kits</button><button type="button" class="lib-tab" id="lib-tab-sources">Free Public Sources</button></div><div id="lib-view-sounds"><p>Production-ready drums, basses, loops and textures. Preview any sound or load a beat kit.</p><div class="kit-row"><span>Beat style</span><button type="button" data-kit="rnb" class="on">R&amp;B</button><button type="button" data-kit="house">House</button><button type="button" data-kit="trap">Trap</button><button type="button" data-kit="dnb">Drum &amp; bass</button><button type="button" data-kit="acoustic">Acoustic</button><button type="button" data-kit="dj">DJ Set</button></div><div class="library-tools"><input id="library-search" type="search" placeholder="Search kicks, bass, pads, breaks…" aria-label="Search sounds" /></div><div class="pack-row" id="pack-row"></div><div class="group-row" id="group-row"></div><div class="sound-groups" id="sound-groups"></div><div class="library-meta"><span id="library-status"></span><span>CC0 only · novelty effects excluded</span></div></div><div id="lib-view-sources" hidden><div class="sources-intro"><h3>Download free packs, scratches, and instruments</h3><p>Grab a royalty-free pack, then drop the wav or mp3 onto a drum lane, or pick Guitar, Strings, Organ, Flute, or Grand Piano in the piano roll.</p></div><div class="sources-grid"><div class="source-card"><div class="source-header"><h4>SampleRadar</h4><span class="source-badge">75,000+ SAMPLES</span></div><p>Royalty-free drums, breaks, 808s, and vintage keys.</p><div class="source-actions"><a class="source-link-btn" href="https://www.musicradar.com/news/tech/free-music-samples-royalty-free-loops-hits-and-multis-to-download" target="_blank" rel="noopener">Open SampleRadar</a></div></div><div class="source-card"><div class="source-header"><h4>Freesound CC0</h4><span class="source-badge cc0">CC0</span></div><p>Public-domain scratches, vocal chants, and drum machines.</p><div class="source-actions"><a class="source-link-btn" href="https://freesound.org/search/?q=license:creative_commons_0" target="_blank" rel="noopener">Search Freesound</a></div></div><div class="source-card"><div class="source-header"><h4>Internet Archive</h4><span class="source-badge archive">ARCHIVE</span></div><p>Historic breaks, funk drums, and public-domain recordings.</p><div class="source-actions"><a class="source-link-btn" href="https://archive.org/details/audio" target="_blank" rel="noopener">Open Archive</a></div></div><div class="source-card"><div class="source-header"><h4>FluidR3 GM</h4><span class="source-badge soundfont">128 INSTRUMENTS</span></div><p>Sampled guitar, strings, organ, and flute already playable in the piano roll.</p><div class="source-actions"><a class="source-link-btn" href="https://github.com/gleitz/midi-js-soundfonts" target="_blank" rel="noopener">View soundfonts</a></div></div><div class="source-card"><div class="source-header"><h4>ccMixter &amp; Looperman</h4><span class="source-badge" style="background:#2d1b38;color:#ff9bd8;">FREE VOCALS</span></div><p>Over 30,000 royalty-free vocal acapellas, singing lines, and rap verses for BMAI vocals.</p><div class="source-actions"><a class="source-link-btn" href="https://ccmixter.org/browse" target="_blank" rel="noopener">ccMixter</a><a class="source-link-btn" href="https://www.looperman.com/acapellas" target="_blank" rel="noopener" style="margin-left:6px;">Looperman</a></div></div></div></div></div></div>
   </main>
   <input type="file" id="import-json-file" accept=".json" style="display:none;" />
   <input type="file" id="drum-sample-input" accept="audio/*,.wav,.mp3,.ogg,.flac,.aif,.aiff,.m4a" style="display:none;" />
@@ -2058,20 +2105,30 @@ const melodyIdeas = [
   {name:'Afterglow', tag:'Sparse · intimate', feel:'Two notes, with room left for the vocal.'},
   {name:'Low signal', tag:'Moody · rhythmic', feel:'The higher notes land off the beat.'}
 ];
+function addedCount(){
+  return [state.melodyAdded, state.drumsAdded, state.chordAdded, state.vocalAdded].filter(Boolean).length;
+}
+function nextEmptyLane(){
+  if(!state.melodyAdded) return 'melody';
+  if(!state.drumsAdded) return 'drums';
+  if(!state.chordAdded) return 'chords';
+  if(!state.vocalAdded) return 'vocals';
+  return null;
+}
 function arrangement(){
   const kit=sessionKits[state.kit];
   const tracks=[];
-  if(state.melodyAdded) tracks.push(`<div class="arrangement ${(!isTrackActive('keys')||state.mix.keys.mute)?'muted-track':''}" data-arrange-track="keys"><div class="track-label"><span class="track-icon">♪</span><div><strong>Keys</strong><small>Electric piano</small></div></div><div class="clip"><span>${esc(melodyIdeas[state.idea].name)}</span><div class="mini-notes"></div></div></div>`);
-  if(state.drumsAdded) tracks.push(`<div class="arrangement drum-track ${(!isTrackActive('drums')||state.mix.drums.mute)?'muted-track':''}" data-arrange-track="drums"><div class="track-label"><span class="track-icon">◌</span><div><strong>Drums</strong><small id="drum-kit-label">${esc(kit.blurb)}</small></div></div><div class="clip drum-clip"><span>Kick · Snare · Clap · Hat · Open Hat · Bass</span><div class="mini-notes"></div></div></div>`);
-  if(state.chordAdded) tracks.push(`<div class="arrangement ${(!isTrackActive('chords')||state.mix.chords.mute)?'muted-track':''}" data-arrange-track="chords"><div class="track-label"><span class="track-icon">⌗</span><div><strong>Chords</strong><small>${esc(state.chords.name)}</small></div></div><div class="clip chord-clip"><span>${esc(state.chords.bars.join(' · '))}</span></div></div>`);
-  if(state.vocalAdded) tracks.push(`<div class="arrangement ${(!isTrackActive('vocals')||state.mix.vocals.mute)?'muted-track':''}" data-arrange-track="vocals"><div class="track-label"><span class="track-icon">◒</span><div><strong>Vocals</strong><small>${esc(state.vocals.chain)}</small></div></div><div class="clip vocal-clip"><span>${esc(state.vocals.line)}</span></div></div>`);
+  if(state.melodyAdded) tracks.push(`<div class="arrangement ${(!isTrackActive('keys')||state.mix.keys.mute)?'muted-track':''}" data-arrange-track="keys"><div class="track-label">${icon(trackIconName.keys,'track-icon keys')}<div><strong>Keys</strong><small>Electric piano</small></div></div><div class="clip"><span>${esc(melodyIdeas[state.idea].name)}</span><div class="mini-notes"></div></div></div>`);
+  if(state.drumsAdded) tracks.push(`<div class="arrangement drum-track ${(!isTrackActive('drums')||state.mix.drums.mute)?'muted-track':''}" data-arrange-track="drums"><div class="track-label">${icon(trackIconName.drums,'track-icon drums')}<div><strong>Drums</strong><small id="drum-kit-label">${esc(kit.blurb)}</small></div></div><div class="clip drum-clip"><span>Kick · Snare · Clap · Hat · Open Hat · Bass</span><div class="mini-notes"></div></div></div>`);
+  if(state.chordAdded) tracks.push(`<div class="arrangement ${(!isTrackActive('chords')||state.mix.chords.mute)?'muted-track':''}" data-arrange-track="chords"><div class="track-label">${icon(trackIconName.chords,'track-icon chords')}<div><strong>Chords</strong><small>${esc(state.chords.name)}</small></div></div><div class="clip chord-clip"><span>${esc(state.chords.bars.join(' · '))}</span></div></div>`);
+  if(state.vocalAdded) tracks.push(`<div class="arrangement ${(!isTrackActive('vocals')||state.mix.vocals.mute)?'muted-track':''}" data-arrange-track="vocals"><div class="track-label">${icon(trackIconName.vocals,'track-icon vocals')}<div><strong>Vocals</strong><small>${esc(state.vocals.chain)}</small></div></div><div class="clip vocal-clip"><span>${esc(state.vocals.line)}</span></div></div>`);
   return `
     <div class="arrange-block">
     <div class="timeline-title"><span>${state.songMode?`SONG: ${(state.sections[state.songSection]?.name||'Intro').toUpperCase()}`:'1 BAR LOOP'}</span><div class="timeline-ruler"><span>1</span><span>2</span><span>3</span><span>4</span></div></div>
     ${tracks.length?tracks.join(''):'<p class="page-lead arrange-empty">Nothing in this project yet. Add a melody, drums, chords, or a vocal.</p>'}
     <div class="arrange-playhead" id="arrange-playhead"></div>
 
-    <div class="song-structure-bar">
+    ${addedCount()<2?'':`<div class="song-structure-bar">
       <div class="song-structure-head">
         <div class="structure-mode-toggle">
           <button type="button" class="mode-pill ${state.songMode?'on':''}" id="toggle-song-mode" title="Toggle between single 1-bar loop and full song progression">
@@ -2097,7 +2154,7 @@ function arrangement(){
           </div>
         `).join('')}
       </div>
-    </div>
+    </div>`}
     </div>
   `;
 }
@@ -2116,7 +2173,51 @@ function contentsLine(project){
   return parts.length?parts.map(part=>part.value).join(' · '):'Nothing added yet';
 }
 function backToProject(){
-  return `<button class="back-project" data-view="home" type="button">← Back to ${esc(state.name)}</button>`;
+  return `<button class="back-project" data-view="home" type="button">${icon('arrow_back')} Back to ${esc(state.name)}</button>`;
+}
+function sketchLane(track, view, title, detail, added){
+  const muted=added && (!isTrackActive(track) || state.mix[track]?.mute);
+  return `<button class="arrangement sketch-lane ${added?'filled':'empty-lane'} ${muted?'muted-track':''}" data-view="${view}" data-arrange-track="${track}" type="button">
+    <div class="track-label">${icon(trackIconName[track]||'music_note','track-icon '+track)}<div><strong>${title}</strong><small>${added?esc(detail):'Empty'}</small></div></div>
+    <div class="clip"><span>${added?esc(detail):'Not in this project'}</span><em>${added?'Change':'Add'}</em></div>
+  </button>`;
+}
+function sketchBoard(){
+  const kit=sessionKits[state.kit];
+  return `<div class="arrange-block sketch-board">
+    <div class="timeline-title"><span>${addedCount()>=2 && state.songMode?`SONG: ${(state.sections[state.songSection]?.name||'Intro').toUpperCase()}`:'1 BAR LOOP'}</span><div class="timeline-ruler"><span>1</span><span>2</span><span>3</span><span>4</span></div></div>
+    ${sketchLane('keys','melody','Keys', state.melodyAdded?melodyIdeas[state.idea].name:'', state.melodyAdded)}
+    ${sketchLane('drums','drums','Drums', state.drumsAdded?kit.blurb:'', state.drumsAdded)}
+    ${sketchLane('chords','chords','Chords', state.chordAdded?state.chords.name:'', state.chordAdded)}
+    ${sketchLane('vocals','vocals','Vocals', state.vocalAdded?(state.vocals.title||'Vocal'):'', state.vocalAdded)}
+    <div class="arrange-playhead" id="arrange-playhead"></div>
+    ${addedCount()>=2?`<div class="song-structure-bar">
+      <div class="song-structure-head">
+        <div class="structure-mode-toggle">
+          <button type="button" class="mode-pill ${state.songMode?'on':''}" id="toggle-song-mode"><span class="mode-dot"></span> ${state.songMode?'SONG':'LOOP'}</button>
+        </div>
+        <span class="structure-hint">${state.songMode?state.sections[state.songSection].name:'1 bar loop'}</span>
+      </div>
+      <div class="section-tiles">
+        ${state.sections.map((sec, i) => `<div class="section-tile ${state.songSection===i?'active':''}" data-section-idx="${i}"><div class="section-top"><span class="sec-num">0${i+1}</span><strong>${sec.name.toUpperCase()}</strong><span class="sec-bars">${sec.bars} ${sec.bars===1?'bar':'bars'}</span></div><div class="section-track-tags"><span class="sec-tag ${sec.active.keys?'on':''}" data-toggle-sec-track="${i}" data-track="keys">Keys</span><span class="sec-tag ${sec.active.drums?'on':''}" data-toggle-sec-track="${i}" data-track="drums">Drums</span><span class="sec-tag ${sec.active.chords?'on':''}" data-toggle-sec-track="${i}" data-track="chords">Chords</span><span class="sec-tag ${sec.active.vocals?'on':''}" data-toggle-sec-track="${i}" data-track="vocals">Vocals</span></div></div>`).join('')}
+      </div>
+    </div>`:'<p class="page-lead arrange-empty">One bar. Song sections open after two parts are in the project.</p>'}
+  </div>`;
+}
+function projectCard(project){
+  return `<article class="project-face ${project.id===state.id?'current':''}">
+      <div class="inspector-title"><span>${esc(sessionKits[project.kit]?.blurb||'PROJECT')}</span></div>
+      <div class="preset-art"><div class="orb"></div><span>${esc(project.key||'A minor')}</span></div>
+      <h2>${esc(project.name)}</h2>
+      <p class="description">${esc(project.description||'No description yet.')}</p>
+      <div class="details"><div><span>INSIDE</span><strong>${esc(contentsLine(project))}</strong></div><div><span>TEMPO</span><strong>${project.bpm||92} BPM</strong></div></div>
+      <button class="add-project" data-open-project="${project.id}" type="button">${project.id===state.id&&state.committed?'This project':'Open project'}</button>
+    </article>`;
+}
+function savedProjects(){
+  const projects=loadProjects();
+  if(!projects.length) return '<p class="page-lead">No projects saved yet. Create one above.</p>';
+  return `<div class="ideas-head"><span>SAVED PROJECTS</span></div><div class="project-list">${projects.map(projectCard).join('')}</div>`;
 }
 function stageHome(){
   const projects=loadProjects();
@@ -2146,38 +2247,37 @@ function stageHome(){
       </div>
       <button class="page-btn hot" id="create-project" type="button">Create project</button>
     </form>
-    <div class="project-list">${projects.map(project=>`<article class="project-face ${project.id===state.id?'current':''}">
-      <div class="inspector-title"><span>${esc(sessionKits[project.kit]?.blurb||'PROJECT')}</span></div>
-      <div class="preset-art"><div class="orb"></div><span>${esc(project.key||'A minor')}</span></div>
-      <h2>${esc(project.name)}</h2>
-      <p class="description">${esc(project.description||'No description yet.')}</p>
-      <div class="details"><div><span>INSIDE</span><strong>${esc(contentsLine(project))}</strong></div><div><span>TEMPO</span><strong>${project.bpm||92} BPM</strong></div></div>
-      <button class="add-project" data-open-project="${project.id}" type="button">${project.id===state.id?'This project':'Open project'}</button>
-    </article>`).join('')||'<p class="page-lead">No projects saved yet. Create one above.</p>'}</div>
+    ${savedProjects()}
   </div>`;
 }
 function stageMelody(){
   return `<div class="page-stack">
     ${backToProject()}
-    <div class="stage-header"><div><p class="eyebrow">AI MELODY</p><h1>Turn the feeling into a phrase.</h1></div><span class="session-pill">1 bar loop · ${state.bpm} BPM</span></div>
+    <div class="stage-header"><div><p class="eyebrow">MELODY</p><h1>Turn the feeling into a phrase.</h1></div><span class="session-pill">1 bar loop · ${state.bpm} BPM</span></div>
     <div class="generator">
-      <div class="prompt"><span class="spark">✦</span><input id="prompt" value="${esc(state.prompt)}" aria-label="Describe melody" /><button id="generate">Generate <span>↗</span></button></div>
-      <div class="chips">${['R&B','Dark','Smooth','Simple'].map(chip=>`<button class="chip ${state.chips.includes(chip)?'selected':''}" data-chip="${chip}">${chip}</button>`).join('')}<button class="chip settings-chip" data-open="settings">⚙ Options</button></div>
+      <div class="prompt"><input id="prompt" value="${esc(state.prompt)}" aria-label="Describe melody" /><button id="generate">Generate</button></div>
+      <div class="chips">${['R&B','Dark','Smooth','Simple'].map(chip=>`<button class="chip ${state.chips.includes(chip)?'selected':''}" data-chip="${chip}">${chip}</button>`).join('')}<button class="chip settings-chip" data-open="settings">Options</button></div>
     </div>
-    <div class="ideas-head"><span>4 GENERATED IDEAS</span><span class="hint">Pick one, then add it to the project</span></div>
-    <div class="ideas">${melodyIdeas.map((idea,i)=>{const ready=!!state.melodyDrafts?.[i]?.length;return `<article class="idea ${ready&&i===state.idea?'chosen':''}" data-idea="${i}"><div class="idea-number">0${i+1}</div><div class="wave">${Array.from({length:22},(_,x)=>`<i style="height:${14+Math.abs(Math.sin(x*1.4+i))*23}px"></i>`).join('')}</div><div class="idea-text"><strong>${idea.name}</strong><span>${state.melodyAdded&&i===state.idea?'In this project':idea.tag}</span></div><button class="add" data-add-melody="${i}" type="button" title="Add this idea">+</button></article>`}).join('')}</div>
+    <div class="ideas-head"><span>4 GENERATED IDEAS</span><span class="hint">Click a phrase to hear it</span></div>
+    <div class="ideas">${melodyIdeas.map((idea,i)=>{const ready=!!state.melodyDrafts?.[i]?.length;return `<article class="idea ${ready&&i===state.idea?'chosen':''}" data-idea="${i}"><div class="idea-number">0${i+1}</div><div class="wave">${Array.from({length:22},(_,x)=>`<i style="height:${14+Math.abs(Math.sin(x*1.4+i))*23}px"></i>`).join('')}</div><div class="idea-text"><strong>${idea.name}</strong><span>${state.melodyAdded&&i===state.idea?'In this project':idea.tag}</span></div></article>`}).join('')}</div>
+    <div class="take-actions"><button class="page-btn hot" id="use-melody" type="button">Use this</button></div>
     ${arrangement()}
   </div>`;
 }
 let doctorDetailsOpen = false;
 const drumHistory = [];
 
+function markDrumsInProject(){
+  if(!state.drumsAdded && lanes.some(lane => state.drums[lane]?.size)) state.drumsAdded = true;
+}
+
 function pushDrumHistory(){
   drumHistory.push({
     drums: Object.fromEntries(lanes.map(l => [l, Array.from(state.drums[l] || [])])),
     drumRolls: JSON.parse(JSON.stringify(state.drumRolls || {})),
     sidechain: state.sidechain,
-    bassTuned: state.bassTuned
+    bassTuned: state.bassTuned,
+    drumsAdded: !!state.drumsAdded
   });
   if(drumHistory.length > 25) drumHistory.shift();
 }
@@ -2194,10 +2294,112 @@ function undoBeatFix(){
   state.drumRolls = prev.drumRolls || {};
   if(prev.sidechain !== undefined) state.sidechain = prev.sidechain;
   if(prev.bassTuned !== undefined) state.bassTuned = prev.bassTuned;
-  markDrumsInProject();
+  if(prev.drumsAdded !== undefined) state.drumsAdded = prev.drumsAdded;
   saveProject();
   renderApp();
   notify('↺ Reverted beat to previous state');
+}
+
+function ensureDrumLanes(){
+  state.drums = state.drums || {};
+  state.drumRolls = state.drumRolls || {};
+  for(const lane of lanes){
+    if(!(state.drums[lane] instanceof Set)) state.drums[lane] = new Set(state.drums[lane] || []);
+  }
+}
+
+function backbeatGroups(kit){
+  return kit === 'trap' ? [[4, 12], [8]] : [[4, 12]];
+}
+
+function voiceOn(snare, clap, step){
+  return snare.has(step) || clap.has(step);
+}
+
+function bestBackbeatGroup(snare, clap, kit){
+  let best = backbeatGroups(kit)[0];
+  let bestScore = -1;
+  for(const group of backbeatGroups(kit)){
+    const score = group.filter(step => voiceOn(snare, clap, step)).length;
+    if(score > bestScore){
+      best = group;
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
+function backbeatLocked(snare, clap, kit){
+  return backbeatGroups(kit).some(group => group.every(step => voiceOn(snare, clap, step)));
+}
+
+function activeBackbeatSteps(snare, clap, kit){
+  return backbeatGroups(kit).find(group => group.every(step => voiceOn(snare, clap, step)))
+    || bestBackbeatGroup(snare, clap, kit);
+}
+
+function hatTargets(kit){
+  if(kit === 'house' || kit === 'trap') return [2, 6, 10, 14];
+  return [2, 6, 10, 14, 0, 4, 8, 12];
+}
+
+function plannedHatAdds(hat, openhat, kit){
+  const have = new Set([...hat, ...openhat]);
+  const adds = [];
+  for(const step of hatTargets(kit)){
+    if(have.size >= 4) break;
+    if(have.has(step)) continue;
+    adds.push(step);
+    have.add(step);
+  }
+  return adds;
+}
+
+function deadBeatsOf(drums){
+  const dead = [];
+  for(let beat = 0; beat < 4; beat++){
+    const start = beat * 4;
+    let hits = false;
+    for(let step = start; step < start + 4; step++){
+      if(lanes.some(lane => drums[lane]?.has(step))){
+        hits = true;
+        break;
+      }
+    }
+    if(!hits) dead.push(beat);
+  }
+  return dead;
+}
+
+function adjacentKickRemoves(kick){
+  const remove = new Set();
+  const steps = [...kick].sort((a, b) => a - b);
+  for(let i = 0; i < steps.length - 1; i++){
+    if(steps[i + 1] - steps[i] === 1) remove.add(steps[i + 1]);
+  }
+  if(kick.has(15) && kick.has(0)) remove.add(15);
+  return [...remove];
+}
+
+function subRollMarks(rolls){
+  const marks = [];
+  const labels = [];
+  for(const lane of ['kick', 'bass']){
+    for(const [step, rate] of Object.entries(rolls?.[lane] || {})){
+      if(rate > 1){
+        marks.push({lane, step: Number(step)});
+        labels.push(`${lane.toUpperCase()} step ${Number(step) + 1} (${rate}x)`);
+      }
+    }
+  }
+  return {marks, labels};
+}
+
+function gradeBeat(score){
+  if(score < 55) return {grade: 'Cluttered / Rough', badgeClass: 'bad'};
+  if(score < 78) return {grade: 'Needs Polish', badgeClass: 'warn'};
+  if(score < 90) return {grade: 'Solid Pocket', badgeClass: 'good'};
+  return {grade: 'Commercial Ready', badgeClass: 'good'};
 }
 
 function analyzeBeat(state){
@@ -2205,274 +2407,320 @@ function analyzeBeat(state){
   const positives = [];
   let deductions = 0;
 
-  const kick = state.drums.kick || new Set();
-  const snare = state.drums.snare || new Set();
-  const clap = state.drums.clap || new Set();
-  const hat = state.drums.hat || new Set();
-  const openhat = state.drums.openhat || new Set();
-  const bass = state.drums.bass || new Set();
+  const asSet = value => value instanceof Set ? value : new Set(value || []);
+  const kick = asSet(state.drums?.kick);
+  const snare = asSet(state.drums?.snare);
+  const clap = asSet(state.drums?.clap);
+  const hat = asSet(state.drums?.hat);
+  const openhat = asSet(state.drums?.openhat);
+  const bass = asSet(state.drums?.bass);
   const rolls = state.drumRolls || {};
 
   const totalHits = kick.size + snare.size + clap.size + hat.size + openhat.size + bass.size;
+  const kit = state.kit;
+  const pushIssue = (issue, cost) => {
+    issues.push(issue);
+    deductions += cost;
+  };
 
-  // 1. Sparse / Empty pattern
   if(totalHits < 4){
-    issues.push({
+    pushIssue({
       id: 'empty_pattern',
       severity: 'critical',
       title: 'Empty / Sparse Beat',
-      desc: 'Pattern has very few or zero hits, leaving no rhythmic groove.',
-      fixLabel: 'Populate Pocket'
-    });
-    deductions += 60;
+      desc: 'This bar does not have enough hits to carry a groove.',
+      fixLabel: 'Populate Pocket',
+      marks: []
+    }, 60);
   }
 
-  // 2. Downbeat Anchor (Step 0)
   const hasDownbeat = kick.has(0) || bass.has(0);
-  if(!hasDownbeat && totalHits >= 4){
-    issues.push({
+  if(kit === 'house' && totalHits >= 4){
+    const missing = [0, 4, 8, 12].filter(step => !kick.has(step));
+    if(missing.length){
+      pushIssue({
+        id: 'four_floor',
+        severity: missing.includes(0) ? 'warning' : 'info',
+        title: `Four-on-the-floor gap (step ${missing.map(step => step + 1).join(', ')})`,
+        desc: 'House needs a kick on every beat. The open beats are the part that drops out.',
+        fixLabel: 'Fill the floor',
+        marks: missing.map(step => ({lane: 'kick', step}))
+      }, 16);
+    } else {
+      positives.push('Four-on-the-floor kick');
+    }
+  } else if(!hasDownbeat && totalHits >= 4){
+    pushIssue({
       id: 'missing_downbeat',
       severity: 'warning',
       title: 'Missing Beat 1 Anchor',
-      desc: 'No kick or sub-bass on Beat 1 (Step 1). Groove lacks grounding.',
-      lane: 'kick',
-      step: 0,
-      fixLabel: 'Anchor Beat 1'
-    });
-    deductions += 18;
+      desc: 'No kick or sub-bass on beat 1, so the bar never lands.',
+      fixLabel: 'Anchor Beat 1',
+      marks: [{lane: 'kick', step: 0}]
+    }, 18);
   } else if(hasDownbeat){
     positives.push('Beat 1 Downbeat Anchored');
   }
 
-  // 3. Backbeat Presence (Step 4 & 12 in 16-step grid, or Step 8 for halftime trap)
-  const isTrap = state.kit === 'trap';
-  const hasBackbeat1 = snare.has(4) || clap.has(4);
-  const hasBackbeat2 = snare.has(12) || clap.has(12);
-  const hasTrapBackbeat = snare.has(8) || clap.has(8);
-  const hasSolidBackbeat = isTrap ? hasTrapBackbeat : (hasBackbeat1 && hasBackbeat2);
-
-  if(!hasSolidBackbeat && totalHits >= 4){
-    issues.push({
+  if(totalHits >= 4 && !backbeatLocked(snare, clap, kit)){
+    const group = bestBackbeatGroup(snare, clap, kit);
+    const missing = group.filter(step => !voiceOn(snare, clap, step));
+    const halftime = kit === 'trap' && group.length === 1;
+    pushIssue({
       id: 'weak_backbeat',
       severity: 'warning',
-      title: isTrap ? 'Missing Halftime Snare (Step 9)' : 'Missing Backbeat (Steps 5 & 13)',
-      desc: 'Snare/Clap does not lock the standard commercial backbeat pulse.',
-      lane: 'snare',
-      fixLabel: 'Lock Backbeat'
-    });
-    deductions += 20;
-  } else if(hasSolidBackbeat){
+      title: halftime ? 'Missing halftime snare' : 'Missing backbeat',
+      desc: halftime
+        ? 'The snare never lands on beat 3, so the halftime pocket has no crack.'
+        : 'Snare or clap is missing on beat 2 or beat 4, so that part of the bar has no backbeat.',
+      fixLabel: 'Lock Backbeat',
+      marks: missing.map(step => ({lane: 'snare', step}))
+    }, 20);
+  } else if(totalHits >= 4){
     positives.push('Punchy Backbeat Pocket');
   }
 
-  // 4. Snare Masking (Kick colliding directly on primary backbeats)
-  const backbeatSteps = isTrap ? [8] : [4, 12];
-  const snareClashes = backbeatSteps.filter(s => kick.has(s) && (snare.has(s) || clap.has(s)));
-  if(snareClashes.length > 0 && state.kit !== 'house'){
-    issues.push({
-      id: 'snare_masking',
-      severity: 'warning',
-      title: `Snare Masking (Step ${snareClashes.map(s => s + 1).join(', ')})`,
-      desc: 'Kick lands directly on the snare backbeat, muddying the transient crack.',
-      lane: 'kick',
-      step: snareClashes[0],
-      fixLabel: 'De-conflict Snare'
-    });
-    deductions += 14;
+  if(totalHits >= 4 && kit !== 'house'){
+    const clashes = activeBackbeatSteps(snare, clap, kit).filter(step => kick.has(step) && voiceOn(snare, clap, step));
+    if(clashes.length){
+      pushIssue({
+        id: 'snare_masking',
+        severity: 'warning',
+        title: `Kick masking snare (step ${clashes.map(step => step + 1).join(', ')})`,
+        desc: 'The kick lands on the snare, so the backbeat loses its crack.',
+        fixLabel: 'De-conflict Snare',
+        marks: clashes.map(step => ({lane: 'kick', step}))
+      }, 14);
+    }
   }
 
-  // 5. Low-End Sub Mud & Collision (Kick + Bass collisions or rapid adjacent kicks)
-  const subCollisions = [...kick].filter(s => bass.has(s));
-  const adjacentKicks = [...kick].filter(s => kick.has((s + 1) % 16));
-  const hasSubMud = (subCollisions.length > 0 && state.sidechain === false) || adjacentKicks.length > 0;
+  const dead = totalHits >= 4 ? deadBeatsOf({kick, snare, clap, hat, openhat, bass}) : [];
+  if(dead.length && dead.length < 4){
+    pushIssue({
+      id: 'dead_beat',
+      severity: 'warning',
+      title: `Empty ${dead.map(beat => `beat ${beat + 1}`).join(' & ')}`,
+      desc: 'That part of the bar has no drums, so the groove drops out there.',
+      fixLabel: 'Fill the gap',
+      marks: dead.map(beat => ({lane: 'hat', step: beat * 4 + 2}))
+    }, 14);
+  }
 
-  if(hasSubMud){
-    issues.push({
+  const hatSteps = new Set([...hat, ...openhat]);
+  const hatAdds = totalHits >= 4 ? plannedHatAdds(hat, openhat, kit) : [];
+  if(hatAdds.length && hatSteps.size < 4){
+    pushIssue({
+      id: 'thin_hats',
+      severity: 'info',
+      title: 'Hi-hats drop out',
+      desc: 'There are not enough hats to keep the bar moving. Highlighted steps are the gaps.',
+      fixLabel: 'Add hats',
+      marks: hatAdds.map(step => ({lane: 'hat', step}))
+    }, 10);
+  }
+
+  const subCollisions = [...kick].filter(step => bass.has(step));
+  const muddyKicks = adjacentKickRemoves(kick);
+  const collisionMud = subCollisions.length > 0 && state.sidechain === false;
+  if(collisionMud || muddyKicks.length){
+    const desc = collisionMud && muddyKicks.length
+      ? 'Kick and 808 hit together without sidechain, and some kicks are stacked on neighboring steps.'
+      : collisionMud
+        ? `Kick and 808 hit together on step ${subCollisions.map(step => step + 1).join(', ')} without sidechain.`
+        : 'Neighboring kicks have no space between them, so the low end smears.';
+    pushIssue({
       id: 'low_end_mud',
       severity: 'critical',
-      title: 'Low-End Mud & Collision',
-      desc: subCollisions.length > 0 && state.sidechain === false
-        ? `Kick and 808 sub trigger simultaneously at step ${subCollisions.map(s => s+1).join(', ')} without sidechain ducking.`
-        : 'Rapid adjacent kicks trigger without breathing room, muddying sub frequencies.',
-      lane: 'bass',
-      fixLabel: 'Clean Low-End'
-    });
-    deductions += 22;
+      title: 'Low-end mud',
+      desc,
+      fixLabel: 'Clean Low-End',
+      marks: [
+        ...muddyKicks.map(step => ({lane: 'kick', step})),
+        ...(collisionMud ? subCollisions.map(step => ({lane: 'bass', step})) : [])
+      ]
+    }, 22);
   } else if(kick.size > 0 && bass.size > 0){
     positives.push('Separated Kick & Bass Space');
   }
 
-  // 6. Hi-Hat Clashing (Open Hat and Closed Hat colliding on same step)
-  const hatClashes = [...openhat].filter(s => hat.has(s));
-  if(hatClashes.length > 0){
-    issues.push({
+  const hatClashes = [...openhat].filter(step => hat.has(step));
+  if(hatClashes.length){
+    pushIssue({
       id: 'hat_clash',
       severity: 'info',
-      title: `Open/Closed Hat Overlap (Step ${hatClashes.map(s => s + 1).join(', ')})`,
-      desc: 'Open hat and closed hat fire on the same step without choke.',
-      lane: 'hat',
-      step: hatClashes[0],
-      fixLabel: 'Choke Hats'
-    });
-    deductions += 12;
-  } else if(hat.size > 0){
+      title: `Open and closed hat overlap (step ${hatClashes.map(step => step + 1).join(', ')})`,
+      desc: 'Open hat and closed hat fire together. The closed hat should choke so the open hat can speak.',
+      fixLabel: 'Choke Hats',
+      marks: hatClashes.map(step => ({lane: 'hat', step}))
+    }, 12);
+  } else if(hat.size > 0 || openhat.size > 0){
     positives.push('Clean Hi-Hat Air');
   }
 
-  // 7. Sub-Bass Ratchet Distortion (Rolls on kick or bass)
-  const subRolls = [];
-  for(const lane of ['kick', 'bass']){
-    if(rolls[lane]){
-      for(const [s, r] of Object.entries(rolls[lane])){
-        if(r > 1) subRolls.push(`${lane.toUpperCase()} Step ${Number(s) + 1} (${r}x)`);
-      }
-    }
-  }
-  if(subRolls.length > 0){
-    issues.push({
+  const rolled = subRollMarks(rolls);
+  if(rolled.marks.length){
+    pushIssue({
       id: 'sub_ratchet',
       severity: 'warning',
-      title: 'Sub-Bass Ratchet Flutter',
-      desc: `High-frequency rolls on low-end (${subRolls.join(', ')}) cause speaker rumble & distortion.`,
-      lane: 'bass',
-      fixLabel: 'Smooth Sub Rolls'
-    });
-    deductions += 16;
+      title: 'Sub rolls are fluttering',
+      desc: `Rolls on the low end (${rolled.labels.join(', ')}) rumble and distort.`,
+      fixLabel: 'Smooth Sub Rolls',
+      marks: rolled.marks
+    }, 16);
   }
 
-  // 8. 808 Tuning Check
   if(bass.size > 0 && state.bassTuned === false){
-    issues.push({
+    const first = [...bass].sort((a, b) => a - b)[0];
+    pushIssue({
       id: 'untuned_808',
       severity: 'info',
-      title: '808 Sub-Bass Not Auto-Tuned',
-      desc: '808 sub plays at a static pitch instead of following chord root notes.',
-      lane: 'bass',
-      fixLabel: 'Auto-Tune 808'
-    });
-    deductions += 10;
-  } else if(bass.size > 0 && state.bassTuned !== false){
+      title: '808 is not following the chords',
+      desc: 'The sub stays on one pitch instead of the chord root.',
+      fixLabel: 'Auto-Tune 808',
+      marks: [{lane: 'bass', step: first}]
+    }, 10);
+  } else if(bass.size > 0){
     positives.push('808 Harmonically Tuned to Chords');
   }
 
-  const rawScore = Math.max(15, Math.min(100, 100 - deductions));
-  const score = issues.length === 0 ? 100 : rawScore;
-  let grade = 'Commercial Ready';
-  let badgeClass = 'good';
-  if(score < 55){
-    grade = 'Cluttered / Rough';
-    badgeClass = 'bad';
-  } else if(score < 78){
-    grade = 'Needs Polish';
-    badgeClass = 'warn';
-  } else if(score < 90){
-    grade = 'Solid Pocket';
-    badgeClass = 'good';
-  }
-
-  return {
-    score,
-    grade,
-    badgeClass,
-    issues,
-    positives: positives.slice(0, 4)
-  };
+  const score = issues.length === 0 ? 100 : Math.max(15, Math.min(100, 100 - deductions));
+  const {grade, badgeClass} = gradeBeat(score);
+  return {score, grade, badgeClass, issues, positives: positives.slice(0, 4)};
 }
 
-function quickFixBeat(issueId = null){
-  pushDrumHistory();
+function applyBeatFixes(issues, fixNames){
+  const ids = new Set(issues.map(issue => issue.id));
+  ensureDrumLanes();
 
-  const analysis = analyzeBeat(state);
-  const issuesToFix = issueId ? analysis.issues.filter(i => i.id === issueId) : analysis.issues;
-  if(issuesToFix.length === 0){
-    notify('Beat is already in optimal commercial pocket (100%)');
+  if(ids.has('empty_pattern')){
+    const defaults = sessionKits[state.kit]?.steps || sessionKits.rnb.steps;
+    for(const lane of lanes) state.drums[lane] = new Set(defaults[lane] || []);
+    fixNames.push('Restored the kit pocket');
     return;
   }
 
-  const fixNames = [];
-
-  // Fix: empty pattern
-  if(issuesToFix.some(i => i.id === 'empty_pattern')){
-    const defaultSteps = sessionKits[state.kit]?.steps || sessionKits.rnb.steps;
-    for(const lane of lanes){
-      state.drums[lane] = new Set(defaultSteps[lane] || []);
-    }
-    fixNames.push('Restored kit pocket');
+  if(ids.has('four_floor')){
+    for(const step of [0, 4, 8, 12]) state.drums.kick.add(step);
+    fixNames.push('Filled four-on-the-floor');
   }
 
-  // Fix: missing downbeat
-  if(issuesToFix.some(i => i.id === 'missing_downbeat')){
+  if(ids.has('missing_downbeat')){
     state.drums.kick.add(0);
-    fixNames.push('Anchored Beat 1 downbeat');
+    fixNames.push('Anchored beat 1');
   }
 
-  // Fix: weak backbeat
-  if(issuesToFix.some(i => i.id === 'weak_backbeat')){
-    if(state.kit === 'trap'){
-      state.drums.snare.add(8);
-    } else {
-      state.drums.snare.add(4);
-      state.drums.snare.add(12);
+  if(ids.has('weak_backbeat')){
+    const group = bestBackbeatGroup(state.drums.snare, state.drums.clap, state.kit);
+    for(const step of group){
+      if(!state.drums.snare.has(step) && !state.drums.clap.has(step)) state.drums.snare.add(step);
     }
-    fixNames.push('Locked snare backbeat');
+    fixNames.push('Locked the backbeat');
   }
 
-  // Fix: snare masking
-  if(issuesToFix.some(i => i.id === 'snare_masking')){
-    const backbeats = state.kit === 'trap' ? [8] : [4, 12];
-    for(const s of backbeats){
-      if(state.drums.snare.has(s) || state.drums.clap.has(s)){
-        state.drums.kick.delete(s);
+  if(ids.has('dead_beat')){
+    const gaps = deadBeatsOf(state.drums);
+    if(gaps.length && gaps.length < 4){
+      for(const beat of gaps){
+        const step = beat * 4 + 2;
+        if(!state.drums.hat.has(step) && !state.drums.openhat.has(step)) state.drums.hat.add(step);
+      }
+      fixNames.push('Filled the empty part of the bar');
+    }
+  }
+
+  if(ids.has('thin_hats')){
+    const before = new Set([...state.drums.hat, ...state.drums.openhat]).size;
+    for(const step of plannedHatAdds(state.drums.hat, state.drums.openhat, state.kit)) state.drums.hat.add(step);
+    if(new Set([...state.drums.hat, ...state.drums.openhat]).size > before) fixNames.push('Added the missing hats');
+  }
+
+  if(ids.has('snare_masking')){
+    let changed = false;
+    for(const step of activeBackbeatSteps(state.drums.snare, state.drums.clap, state.kit)){
+      if((state.drums.snare.has(step) || state.drums.clap.has(step)) && state.drums.kick.has(step)){
+        state.drums.kick.delete(step);
+        changed = true;
       }
     }
-    fixNames.push('De-conflicted snare hits');
+    if(changed) fixNames.push('Moved the kick off the snare');
   }
 
-  // Fix: low-end mud
-  if(issuesToFix.some(i => i.id === 'low_end_mud')){
-    const kicks = [...state.drums.kick].sort((a, b) => a - b);
-    for(let i = 0; i < kicks.length; i++){
-      const cur = kicks[i];
-      const next = kicks[(i + 1) % kicks.length];
-      if((next - cur + 16) % 16 === 1){
-        state.drums.kick.delete(next);
-      }
+  if(ids.has('low_end_mud')){
+    const before = state.drums.kick.size;
+    for(const step of adjacentKickRemoves(state.drums.kick)) state.drums.kick.delete(step);
+    if(state.drums.kick.size !== before) fixNames.push('Separated the stacked kicks');
+    const stacked = [...state.drums.kick].some(step => state.drums.bass.has(step));
+    if(stacked && state.sidechain === false){
+      state.sidechain = true;
+      updateDrumBusRouting();
+      fixNames.push('Ducked the sub under the kick');
     }
-    state.sidechain = true;
-    updateDrumBusRouting();
-    fixNames.push('Cleaned sub mud & enabled sidechain');
   }
 
-  // Fix: hat clash
-  if(issuesToFix.some(i => i.id === 'hat_clash')){
-    for(const s of state.drums.openhat){
-      state.drums.hat.delete(s);
-    }
-    fixNames.push('Choked closed hats on open hats');
+  if(ids.has('hat_clash')){
+    for(const step of [...state.drums.openhat]) state.drums.hat.delete(step);
+    fixNames.push('Choked the closed hats');
   }
 
-  // Fix: sub ratchet
-  if(issuesToFix.some(i => i.id === 'sub_ratchet')){
-    if(state.drumRolls.kick) state.drumRolls.kick = {};
-    if(state.drumRolls.bass) state.drumRolls.bass = {};
-    fixNames.push('Removed sub ratchets');
+  if(ids.has('sub_ratchet')){
+    state.drumRolls.kick = {};
+    state.drumRolls.bass = {};
+    fixNames.push('Cleared the sub rolls');
   }
 
-  // Fix: untuned 808
-  if(issuesToFix.some(i => i.id === 'untuned_808')){
+  if(ids.has('untuned_808')){
     state.bassTuned = true;
-    fixNames.push('Auto-tuned 808 to chord roots');
+    fixNames.push('Tuned the 808 to the chords');
+  }
+}
+
+function quickFixBeat(issueId = null){
+  ensureDrumLanes();
+  const before = analyzeBeat(state);
+  const selected = issueId ? before.issues.filter(issue => issue.id === issueId) : before.issues;
+  if(!selected.length){
+    notify('Beat is already locked');
+    return;
+  }
+
+  pushDrumHistory();
+  const fixNames = [];
+  if(issueId){
+    applyBeatFixes(selected, fixNames);
+  } else {
+    let pending = selected;
+    for(let pass = 0; pass < 3 && pending.length; pass++){
+      const count = fixNames.length;
+      applyBeatFixes(pending, fixNames);
+      pending = analyzeBeat(state).issues;
+      if(fixNames.length === count) break;
+    }
   }
 
   markDrumsInProject();
   saveProject();
   renderApp();
-
   hit('kick', 0.9);
-  setTimeout(() => hit('snare', 0.8), 220);
+  setTimeout(() => hit('snare', 0.8), 180);
 
-  const summary = fixNames.length > 0 ? fixNames.slice(0, 3).join(', ') : 'Beat optimized';
-  notify(`⚡ Beat Doctor: ${summary} (Undo with Ctrl+Z)`);
+  const after = analyzeBeat(state);
+  const summary = [...new Set(fixNames)].slice(0, 3).join(', ') || 'Beat optimized';
+  const left = after.issues[0]?.title;
+  notify(left
+    ? `Beat ${before.score}% → ${after.score}%. ${summary}. Still open: ${left}. Undo with Ctrl+Z`
+    : `Beat ${before.score}% → ${after.score}%. ${summary}. Undo with Ctrl+Z`);
+}
+
+function beatMarkSet(analysis){
+  const marks = new Map();
+  for(const issue of analysis?.issues || []){
+    for(const mark of issue.marks || []){
+      const key = `${mark.lane}:${mark.step}`;
+      const prev = marks.get(key);
+      marks.set(key, prev ? `${prev}. ${issue.title}` : issue.title);
+    }
+  }
+  return marks;
 }
 
 function renderBeatDoctor(analysis){
@@ -2487,17 +2735,17 @@ function renderBeatDoctor(analysis){
         <div class="doctor-title-box">
           <div class="doctor-kicker">
             <span class="doctor-pulse ${analysis.badgeClass}"></span>
-            AI BEAT DOCTOR &amp; GROOVE ANALYZER
+            BEAT CHECK
           </div>
           <p class="doctor-summary">
-            ${issues.length === 0 ? 'Pocket is commercially locked. Transients, low-end, and backbeats are aligned.' : `${issues.length} acoustic/rhythmic ${issues.length === 1 ? 'issue' : 'issues'} detected in this drum pocket.`}
+            ${issues.length === 0 ? 'Pocket is locked. Downbeat, backbeat, hats, and low end line up.' : `${issues.length} ${issues.length === 1 ? 'problem' : 'problems'} in this beat. Highlighted steps are the part to fix.`}
           </p>
         </div>
       </div>
       <div class="doctor-actions">
         ${drumHistory.length ? `<button type="button" class="doctor-btn undo-fix-btn" id="undo-beat-fix" title="Undo last beat repair">↺ Undo</button>` : ''}
         <button type="button" class="doctor-btn quick-fix-btn ${issues.length === 0 ? 'perfect' : 'hot'}" id="quick-fix-beat" title="Instantly resolve rhythmic clashes, low-end mud, and missing anchors">
-          ⚡ Quick Fix Beat
+          Fix beat
         </button>
         <button type="button" class="doctor-btn inspect-btn" id="toggle-doctor-details">
           ${doctorDetailsOpen ? 'Hide Diagnostics' : 'Inspect Issues'}
@@ -2506,7 +2754,7 @@ function renderBeatDoctor(analysis){
     </div>
 
     <div class="doctor-issue-tags">
-      ${issues.length ? issues.map(iss => `<span class="issue-pill ${iss.severity}" title="${esc(iss.desc)}"><strong>⚠ ${esc(iss.title)}</strong><button type="button" class="pill-fix-btn" data-fix-issue="${iss.id}">Fix</button></span>`).join('') : '<span class="positive-pill">✓ Clean Low-End</span><span class="positive-pill">✓ Locked Backbeat</span><span class="positive-pill">✓ Beat 1 Downbeat Anchored</span><span class="positive-pill">✓ Choked Hats</span>'}
+      ${issues.length ? issues.map(iss => `<span class="issue-pill ${iss.severity}" title="${esc(iss.desc)}"><strong>${esc(iss.title)}</strong><button type="button" class="pill-fix-btn" data-fix-issue="${iss.id}">Fix</button></span>`).join('') : '<span class="positive-pill">Clean low-end</span><span class="positive-pill">Locked backbeat</span><span class="positive-pill">Beat 1 anchored</span><span class="positive-pill">Choked hats</span>'}
     </div>
 
     ${doctorDetailsOpen ? `
@@ -2525,13 +2773,13 @@ function renderBeatDoctor(analysis){
                 </div>
                 <p>${esc(iss.desc)}</p>
               </div>
-              <button type="button" class="item-fix-btn" data-fix-issue="${iss.id}">⚡ ${iss.fixLabel || 'Fix Issue'}</button>
+              <button type="button" class="item-fix-btn" data-fix-issue="${iss.id}">${iss.fixLabel || 'Fix'}</button>
             </div>
           `).join('')}
           ${analysis.positives.map(pos => `
             <div class="doctor-item positive">
               <div class="item-text">
-                <strong>✓ ${esc(pos)}</strong>
+                <strong>${esc(pos)}</strong>
                 <p>Meets commercial release criteria.</p>
               </div>
             </div>
@@ -2545,9 +2793,10 @@ function renderBeatDoctor(analysis){
 function stageDrums(){
   const isPunch = state.drumPunch !== false;
   const analysis = analyzeBeat(state);
+  const beatMarks = beatMarkSet(analysis);
   return `<div class="page-stack">
     ${backToProject()}
-    <div class="stage-header"><div><p class="eyebrow">AI DRUMS</p><h1>Program the pocket, then humanize it.</h1></div><span class="session-pill">${esc(sessionKits[state.kit].blurb)}</span></div>
+    <div class="stage-header"><div><p class="eyebrow">DRUMS</p><h1>Program the pocket, then humanize it.</h1></div><span class="session-pill">${esc(sessionKits[state.kit].blurb)}</span></div>
     <p class="page-lead">Drag &amp; drop your own <code>.wav</code> or <code>.mp3</code> samples onto any drum lane for commercial sound, or program the 6-lane kit below. <strong>Shift+Click</strong> or <strong>Right-Click</strong> any active step to cycle <strong>2x / 3x / 4x rolls &amp; ratchets</strong>. Need free samples? Browse <a href="#" id="lead-open-sources" style="color:#b391ff;text-decoration:underline;">SampleRadar, Freesound &amp; Archive.org</a>.</p>
     <div class="drum-top-bar">
       <div class="kit-row page-kits">${Object.entries(sessionKits).map(([id])=>`<button type="button" data-kit="${id}" class="${state.kit===id?'on':''}">${kitNames[id]}</button>`).join('')}</div>
@@ -2564,14 +2813,14 @@ function stageDrums(){
       return `<div class="drum-lane" data-lane-drop="${lane}">
         <div class="lane-info">
           <button type="button" class="lane-label-btn" data-preview-lane="${lane}" title="Click to preview ${lane}">
-            <span class="preview-icon">▷</span>
+            ${icon('play_arrow','preview-icon')}
             <strong>${lane.toUpperCase()}</strong>
           </button>
           ${lane==='bass'?`<button type="button" class="tuned-808-btn ${state.bassTuned!==false?'on':''}" id="toggle-tuned-808" title="Tune 808 to the chord root"><span class="pitch-dot"></span> TUNE</button>`:''}
           <div class="lane-sample-control">
             <button type="button" class="lane-sample-btn ${hasCustom?'has-custom':''}" data-pick-lane="${lane}" title="Drag &amp; drop audio file (.wav, .mp3) here or click to browse">
               <span class="sample-name" title="${esc(sampleName)}">${esc(sampleName)}</span>
-              <span class="upload-icon">↑</span>
+              ${icon('upload','upload-icon')}
             </button>
             ${hasCustom ? `<button type="button" class="reset-sample-btn" data-reset-sample="${lane}" title="Reset to stock kit sample">×</button>` : ''}
           </div>
@@ -2583,11 +2832,13 @@ function stageDrums(){
         <div class="steps">${Array.from({length:16},(_,step)=>{
           const isOn = state.drums[lane]?.has(step);
           const roll = state.drumRolls?.[lane]?.[step] || 1;
-          return `<button class="step ${isOn?'on':''} ${step%4===0?'beat':''} ${playing&&sequenceStep===step?'now':''}" data-lane="${lane}" data-step="${step}" aria-label="${lane} step ${step+1}" title="${isOn ? (roll > 1 ? roll + 'x Roll (Right/Shift click to change)' : 'Active (Right/Shift click for 2x/3x/4x rolls)') : 'Click to add hit'}">${roll > 1 ? `<span class="roll-badge">${roll}x</span>` : ''}</button>`;
+          const flag = beatMarks.get(`${lane}:${step}`);
+          const hint = isOn ? (roll > 1 ? roll + 'x Roll (Right/Shift click to change)' : 'Active (Right/Shift click for 2x/3x/4x rolls)') : 'Click to add hit';
+          return `<button class="step ${isOn?'on':''} ${step%4===0?'beat':''} ${playing&&sequenceStep===step?'now':''} ${flag?'issue':''}" data-lane="${lane}" data-step="${step}" aria-label="${lane} step ${step+1}${flag ? ', ' + esc(flag) : ''}" title="${flag ? esc(flag) + ' — ' : ''}${hint}">${roll > 1 ? `<span class="roll-badge">${roll}x</span>` : ''}</button>`;
         }).join('')}</div>
       </div>`;
     }).join('')}</div>
-    <div class="take-actions"><button class="page-btn hot" id="quick-fix-beat-action">⚡ Quick Fix Beat</button><button class="page-btn" id="humanize-drums">Humanize</button><button class="page-btn" id="add-drums">${state.drumsAdded?'In project':'Add drums'}</button><button class="page-btn" data-open="library">Kits</button><button class="page-btn" id="open-public-sources">Free packs</button></div>
+    <div class="take-actions"><button class="page-btn hot" id="quick-fix-beat-action">Fix beat</button><button class="page-btn" id="humanize-drums">Humanize</button><button class="page-btn hot" id="add-drums">Use this</button><button class="page-btn" data-open="library">Kits</button><button class="page-btn" id="open-public-sources">Free packs</button></div>
     ${arrangement()}
   </div>`;
 }
@@ -2597,11 +2848,11 @@ function stageChords(){
   const barCount = state.chords?.bars?.length > 4 ? (state.chords.bars.length / 4) + ' bars' : '1 bar';
   return `<div class="page-stack">
     ${backToProject()}
-    <div class="stage-header"><div><p class="eyebrow">AI CHORDS</p><h1>Build a harmonic bed in ${esc(state.key)}.</h1></div><span class="session-pill">${esc(state.chords.name)} · ${barCount}</span></div>
+    <div class="stage-header"><div><p class="eyebrow">CHORDS</p><h1>Build a harmonic bed in ${esc(state.key)}.</h1></div><span class="session-pill">${esc(state.chords.name)} · ${barCount}</span></div>
     <p class="page-lead">Pick a progression in ${esc(state.key)}, listen on this page, then add it. It stays out of the project until you do.</p>
     <div class="ideas">${options.map(option=>`<article class="idea ${option.name===state.chords.name?'chosen':''}" data-chord="${esc(option.name)}"><div class="idea-number">${esc(option.bars[0])}</div><div class="idea-text"><strong>${esc(option.name)}</strong><span>${esc(option.feel)} · ${option.bars.length > 4 ? (option.bars.length / 4) + ' bars' : '1 bar'}</span></div></article>`).join('')}</div>
     <div class="chord-bars">${state.chords.bars.map((bar,i)=>`<div class="chord-bar"><span>BEAT ${i+1}</span><b>${esc(bar)}</b></div>`).join('')}</div>
-    <div class="take-actions"><button class="page-btn hot" id="generate-chords">Regenerate</button><button class="page-btn" id="add-chords">${state.chordAdded?'In project':'Add chords'}</button></div>
+    <div class="take-actions"><button class="page-btn hot" id="generate-chords">Regenerate</button><button class="page-btn hot" id="add-chords">Use this</button></div>
     ${arrangement()}
   </div>`;
 }
@@ -2639,10 +2890,10 @@ function stageVocals(){
   ].filter((idea,index,list)=>list.findIndex(item=>item.title===idea.title)===index).slice(0,3);
   return `<div class="page-stack">
     ${backToProject()}
-    <div class="stage-header"><div><p class="eyebrow">AI VOCALS</p><h1>Choose a free hook, drop, or record a take.</h1></div><span class="session-pill">${esc(state.vocals.chain)}</span></div>
+    <div class="stage-header"><div><p class="eyebrow">VOCALS</p><h1>Choose a free hook, drop, or record a take.</h1></div><span class="session-pill">${esc(state.vocals.chain)}</span></div>
     <p class="page-lead">Audition a hook, a file, or a microphone take. It joins the project only when you add it, and it needs audio to play.</p>
     <div class="ideas-head"><span>FREE BUILT-IN VOCAL HOOKS</span><span class="hint">Click a vocal to audition it</span></div>
-    <div class="factory-vocals-grid">${factoryVocals.map(v=>`<button type="button" class="vocal-card ${vocalUrl===v.url?'chosen':''}" data-load-vocal="${esc(v.url)}" data-vocal-title="${esc(v.name)}"><span class="vocal-icon">🎙</span><div class="vocal-info"><strong>${esc(v.name)}</strong><span>${esc(v.tag)}</span></div></button>`).join('')}</div>
+    <div class="factory-vocals-grid">${factoryVocals.map(v=>`<button type="button" class="vocal-card ${vocalUrl===v.url?'chosen':''}" data-load-vocal="${esc(v.url)}" data-vocal-title="${esc(v.name)}">${icon('mic','vocal-icon')}<div class="vocal-info"><strong>${esc(v.name)}</strong><span>${esc(v.tag)}</span></div></button>`).join('')}</div>
     <div class="lyric-list">${ideas.map(idea=>`<button class="lyric-line ${idea.title===state.vocals.title?'chosen':''}" data-lyric="${esc(idea.title)}" data-line="${esc(idea.line)}"><strong>${esc(idea.title)}</strong><span> · ${esc(idea.line)}</span></button>`).join('')}</div>
     <div class="kit-row chain-row">${chains.map(chain=>`<button type="button" data-chain="${esc(chain)}" class="${state.vocals.chain===chain?'on':''}">${esc(chain)}</button>`).join('')}</div>
     <div class="take-box vocal-drop-box" id="vocal-drop-zone">
@@ -2657,7 +2908,7 @@ function stageVocals(){
         <button class="page-btn" id="play-vocal" ${vocalUrl?'':'disabled'}>Play</button>
         <button class="page-btn" id="pick-vocal-file">Upload</button>
         ${vocalUrl?'<button class="page-btn" id="clear-vocal">Clear</button>':''}
-        <button class="page-btn" id="add-vocal">${state.vocalAdded?'In project':'Add vocals'}</button>
+        <button class="page-btn hot" id="add-vocal">Use this</button>
       </div>
     </div>
     ${arrangement()}
@@ -2833,21 +3084,21 @@ function stageSettings(){
 }
 
 function inspectorCard(eyebrow,art,body){
-  return `<div class="inspector-title"><span>${esc(eyebrow)}</span><button id="close-inspector" type="button" aria-label="Close panel">×</button></div><div class="preset-art"><div class="orb"></div><span>${esc(art)}</span></div>${body}`;
+  return `<div class="inspector-title"><span>${esc(eyebrow)}</span><button id="close-inspector" type="button" aria-label="Close panel">${icon('close')}</button></div><div class="preset-art"><div class="orb"></div><span>${esc(art)}</span></div>${body}`;
 }
 function inspectorFor(){
   if(state.view==='home'){
     if(!state.committed) return inspectorCard('PROJECTS','NEW',`<h2>No project yet</h2><p class="description">Create a project on this page. Melody, drums, chords, and vocals open after that.</p>`);
     return inspectorCard('THIS PROJECT',state.key,`<h2>${esc(state.name)}</h2><p class="description">${esc(state.description||'No description yet.')}</p><div class="details"><div><span>INSIDE</span><strong>${esc(contentsLine(projectSnapshot()))}</strong></div></div>`);
   }
-  if(state.view==='drums') return inspectorCard('DRUM KIT',state.kit.toUpperCase(),`<h2>${esc(sessionKits[state.kit].blurb)}</h2><p class="description">Program the grid, then add the beat. It stays out of playback and export until you do.</p><button class="full-preview" id="preview">▷ &nbsp; Preview beat</button><button class="add-project" id="add-drums">${state.drumsAdded?'In project':'Add drums'}</button><button class="text-btn" id="humanize-drums">Humanize beat</button>`);
-  if(state.view==='chords') return inspectorCard('PROGRESSION',state.key,`<h2>${esc(state.chords.name)}</h2><p class="description">${esc(state.chords.feel)}</p><div class="details"><div><span>BARS</span><strong>${state.chords.bars?.length>4?(state.chords.bars.length/4)+' bars':'1 bar'}</strong></div></div><button class="add-project" id="add-chords">+ &nbsp; Add to project</button>`);
-  if(state.view==='vocals') return inspectorCard('VOCAL',state.vocals.chain,`<h2>${esc(state.vocals.title)}</h2><p class="description">${esc(state.vocals.line)}</p><button class="add-project" id="add-vocal">+ &nbsp; Add to project</button><button class="text-btn" id="generate-vocals">↻ &nbsp; New hook</button>`);
+  if(state.view==='drums') return inspectorCard('DRUM KIT',state.kit.toUpperCase(),`<h2>${esc(sessionKits[state.kit].blurb)}</h2><p class="description">Program the grid, then add the beat. It stays out of playback and export until you do.</p><button class="full-preview" id="preview">Preview beat</button><button class="add-project" id="add-drums">Use this</button><button class="text-btn" id="humanize-drums">Humanize beat</button>`);
+  if(state.view==='chords') return inspectorCard('PROGRESSION',state.key,`<h2>${esc(state.chords.name)}</h2><p class="description">${esc(state.chords.feel)}</p><div class="details"><div><span>BARS</span><strong>${state.chords.bars?.length>4?(state.chords.bars.length/4)+' bars':'1 bar'}</strong></div></div><button class="add-project" id="add-chords">Use this</button>`);
+  if(state.view==='vocals') return inspectorCard('VOCAL',state.vocals.chain,`<h2>${esc(state.vocals.title)}</h2><p class="description">${esc(state.vocals.line)}</p><button class="add-project" id="add-vocal">Use this</button><button class="text-btn" id="generate-vocals">New hook</button>`);
   if(state.view==='mix') return inspectorCard('MIX','BALANCE',`<h2>Session balance</h2><p class="description">Muted tracks stay in the arrangement but do not play. Export includes only parts added to the project.</p>`);
   if(state.view==='export') return inspectorCard('EXPORT','MIDI',`<h2>Ready to leave</h2><p class="description">MIDI for the DAW, JSON to reopen this BMAI session.</p><button class="add-project" id="export-midi">Download MIDI</button>`);
   if(state.view==='settings') return inspectorCard('SETTINGS',state.key,`<h2>${esc(state.name)}</h2><p class="description">Changes apply to every page in this session.</p>`);
   const idea=melodyIdeas[state.idea]||melodyIdeas[0];
-  return inspectorCard(`IDEA 0${state.idea+1}`,state.chips.join(' / ')||'R&B',`<h2>${esc(idea.name)}</h2><p class="description">${esc(idea.feel)} It loops for one bar.</p><div class="details"><div><span>KEY</span><strong>${esc(state.key)}</strong></div><div><span>SWING</span><strong>${state.swing}%</strong></div></div><div class="inst-block"><span>Instrument</span><div class="kit-row inst-kit-row"><button type="button" data-inst="rhodes" class="${state.instrument==='rhodes'?'on':''}">Rhodes</button><button type="button" data-inst="piano" class="${state.instrument==='piano'?'on':''}">Piano</button><button type="button" data-inst="guitar" class="${state.instrument==='guitar'?'on':''}">Guitar</button><button type="button" data-inst="strings" class="${state.instrument==='strings'?'on':''}">Strings</button><button type="button" data-inst="bass" class="${state.instrument==='bass'?'on':''}">Bass</button><button type="button" data-inst="brass" class="${state.instrument==='brass'?'on':''}">Brass</button><button type="button" data-inst="organ" class="${state.instrument==='organ'?'on':''}">Organ</button><button type="button" data-inst="flute" class="${state.instrument==='flute'?'on':''}">Flute</button><button type="button" data-inst="pad" class="${state.instrument==='pad'?'on':''}">Pad</button><button type="button" data-inst="analog" class="${state.instrument==='analog'?'on':''}">Analog</button><button type="button" data-inst="pluck" class="${state.instrument==='pluck'?'on':''}">Pluck</button></div></div><button class="full-preview" id="preview">▷ &nbsp; Preview loop</button><button class="add-project" id="add-project">+ &nbsp; Add to project</button><button class="text-btn" id="regenerate">↻ &nbsp; Regenerate this idea</button>`);
+  return inspectorCard(`IDEA 0${state.idea+1}`,state.chips.join(' / ')||'R&B',`<h2>${esc(idea.name)}</h2><p class="description">${esc(idea.feel)} It loops for one bar.</p><div class="details"><div><span>KEY</span><strong>${esc(state.key)}</strong></div><div><span>SWING</span><strong>${state.swing}%</strong></div></div><div class="inst-block"><span>Instrument</span><div class="kit-row inst-kit-row"><button type="button" data-inst="rhodes" class="${state.instrument==='rhodes'?'on':''}">Rhodes</button><button type="button" data-inst="piano" class="${state.instrument==='piano'?'on':''}">Piano</button><button type="button" data-inst="guitar" class="${state.instrument==='guitar'?'on':''}">Guitar</button><button type="button" data-inst="strings" class="${state.instrument==='strings'?'on':''}">Strings</button><button type="button" data-inst="bass" class="${state.instrument==='bass'?'on':''}">Bass</button><button type="button" data-inst="brass" class="${state.instrument==='brass'?'on':''}">Brass</button><button type="button" data-inst="organ" class="${state.instrument==='organ'?'on':''}">Organ</button><button type="button" data-inst="flute" class="${state.instrument==='flute'?'on':''}">Flute</button><button type="button" data-inst="pad" class="${state.instrument==='pad'?'on':''}">Pad</button><button type="button" data-inst="analog" class="${state.instrument==='analog'?'on':''}">Analog</button><button type="button" data-inst="pluck" class="${state.instrument==='pluck'?'on':''}">Pluck</button></div></div><button class="full-preview" id="preview">Preview loop</button><button class="add-project" id="add-project">Use this</button><button class="text-btn" id="regenerate">Regenerate this idea</button>`);
 }
 
 let isResizing = false;
@@ -2885,7 +3136,7 @@ function updatePianoChrome(){
     return;
   }
   const p=state.pattern[selectedNote];
-  if(box) box.textContent=p?`${p.n}  ·  beat ${Math.floor(p.x/4)+1}  ·  ${p.w} ${p.w===1?'step':'steps'}`:'Click a note to edit it';
+  if(box) box.textContent=p?`${p.n} · ${p.w} ${p.w===1?'step':'steps'}`:'No note';
   if(remove) remove.disabled=!p;
 }
 function highlightPianoRow(index){
@@ -3152,7 +3403,7 @@ function renderApp(){
     const locked=!state.committed && button.dataset.view && button.dataset.view!=='home';
     button.classList.toggle('locked', locked);
     if(locked) button.title='Create a project first';
-    else if(button.title==='Create a project first') button.title='';
+    else if(button.title==='Create a project first' || button.title==='Generate a loop first') button.title='';
   });
   document.querySelectorAll('.tool[data-view]').forEach(button=>button.classList.toggle('active',button.dataset.view===state.view));
   document.querySelectorAll('.nav-link, .settings').forEach(button=>button.classList.toggle('on',button.dataset.view===state.view));
@@ -3163,9 +3414,7 @@ function renderApp(){
   const instNames={rhodes:'Rhodes',analog:'Analog',pluck:'Pluck',piano:'Piano',guitar:'Guitar',strings:'Strings',bass:'Bass',brass:'Brass',organ:'Organ',flute:'Flute',pad:'Pad'};
   const chordLen = state.chords?.bars?.length > 4 ? (state.chords.bars.length / 4) + ' bars' : '1 bar';
   const pianoLabel=document.querySelector('#piano-label');
-  if(pianoLabel) pianoLabel.textContent=state.view==='chords'?`Chords · ${state.chords.name} · ${chordLen}`:`Keys (${instNames[state.instrument]||'Rhodes'}) · ${melodyIdeas[state.idea].name} · 1 bar`;
-  const pianoHint=document.querySelector('.piano-hint');
-  if(pianoHint) pianoHint.textContent=state.view==='chords'?'Chord voicing for this progression. Switch to Melody to edit notes.':'Drag a note to move it. Drag the bright edge to change length. Click empty grid to add. Add the melody when it sounds right.';
+  if(pianoLabel) pianoLabel.textContent=state.view==='chords'?`Chords · ${state.chords.name} · ${chordLen}`:`Keys · ${melodyIdeas[state.idea].name} · 1 bar`;
   const pianoInst=document.querySelector('#piano-inst');
   if(pianoInst) pianoInst.value=state.instrument||'rhodes';
   document.querySelector('#status-line').innerHTML=`<b>Ready</b> · ${esc(state.key)} · ${state.swing}% swing · Limiter ${state.masterLimiter!==false?'ON':'BYPASS'}`;
@@ -3175,8 +3424,6 @@ function renderApp(){
   if(state.view === 'vocals'){
     drawVocalWaveform();
   }
-  const qwertyOctEl = document.querySelector('#qwerty-oct');
-  if(qwertyOctEl) qwertyOctEl.textContent = `C${qwertyOctave}-D${qwertyOctave+1}`;
   applyStudioLayout();
   initVisualizer();
 }
@@ -3211,7 +3458,12 @@ async function setPlaying(on){
   clearTimeout(timer);
   clearInterval(timer);
   const playBtn=document.querySelector('#play');
-  if(playBtn) playBtn.textContent=on?'Ⅱ':'▶';
+  if(playBtn){
+    playBtn.classList.toggle('is-playing', !!on);
+    playBtn.setAttribute('aria-label', on ? 'Pause' : 'Play');
+    const playIco=playBtn.querySelector('.ico');
+    if(playIco) playIco.textContent=on?'pause':'play_arrow';
+  }
 
   if(!on){
     stopToneLoop();
@@ -3229,7 +3481,23 @@ async function setPlaying(on){
   const audible=(partAudible('keys')&&state.pattern.length)||partAudible('drums')||partAudible('chords')||partAudible('vocals');
   if(!audible){
     playing=false;
-    if(playBtn) playBtn.textContent='▶';
+    if(playBtn){
+      playBtn.classList.remove('is-playing');
+      playBtn.setAttribute('aria-label', 'Play');
+      const playIco=playBtn.querySelector('.ico');
+      if(playIco) playIco.textContent='play_arrow';
+    }
+    if(!state.committed){
+      notify('Create a project first');
+      return;
+    }
+    const next=state.view==='home'?nextEmptyLane():null;
+    if(next){
+      const labels={melody:'Add a melody',drums:'Add drums',chords:'Add chords',vocals:'Add a vocal'};
+      setView(next);
+      notify(labels[next]);
+      return;
+    }
     notify('Add a melody, drums, chords, or vocal before playing');
     return;
   }
@@ -4086,7 +4354,7 @@ function renderLibrary(){
   document.querySelector('#library-count').textContent=`${catalog.count} CC0 sounds`;
   document.querySelector('#pack-row').innerHTML=catalog.packs.map(item=>`<button type="button" data-pack="${item.id}" class="${item.id===pack.id?'on':''}">${item.name}</button>`).join('');
   document.querySelector('#group-row').innerHTML=pack.groups.map(item=>`<button type="button" data-group="${item.id}" class="${!query&&item.id===group.id?'on':''}">${item.name}</button>`).join('');
-  document.querySelector('#sound-groups').innerHTML=sounds.map(sound=>`<button type="button" class="sound-preview" data-url="${sound.url}"><span>${query?pack.name:group.name}</span><strong>▷ ${sound.name}</strong></button>`).join('')||'<p class="empty-sounds">No sounds match that search.</p>';
+  document.querySelector('#sound-groups').innerHTML=sounds.map(sound=>`<button type="button" class="sound-preview" data-url="${sound.url}"><span>${query?pack.name:group.name}</span><strong>${sound.name}</strong></button>`).join('')||'<p class="empty-sounds">No sounds match that search.</p>';
   document.querySelector('#library-status').textContent=query?`${sounds.length} matches in ${pack.name}`:`${sounds.length} in ${group.name}`;
 }
 function playPreview(button){if(previewAudio)previewAudio.pause();document.querySelectorAll('.sound-preview').forEach(item=>item.classList.remove('is-playing'));previewAudio=new Audio(publicUrl(button.dataset.url));previewAudio.volume=.75;button.classList.add('is-playing');previewAudio.play().catch(()=>{});previewAudio.addEventListener('ended',()=>button.classList.remove('is-playing'))}
@@ -4136,7 +4404,15 @@ function selectMelodyIdea(index){
   saveProject();
   renderApp();
   scrollPianoToNotes();
+  setPlaying(true);
   return true;
+}
+function returnToSketch(message){
+  saveProject();
+  const keep=playing;
+  setView('home');
+  notify(message);
+  if(!keep) setPlaying(true);
 }
 function commitMelody(){
   if(!state.pattern.length){
@@ -4145,9 +4421,7 @@ function commitMelody(){
   }
   rememberMelodyDraft();
   state.melodyAdded=true;
-  saveProject();
-  renderApp();
-  notify('Melody added to the project');
+  returnToSketch('Melody is in the project');
 }
 function commitDrums(){
   const hasHits=lanes.some(lane=>state.drums[lane]?.size);
@@ -4156,9 +4430,7 @@ function commitDrums(){
     return;
   }
   state.drumsAdded=true;
-  saveProject();
-  renderApp();
-  notify('Drums added to the project');
+  returnToSketch('Drums are in the project');
 }
 
 function cycleStepRoll(lane, step){
@@ -4239,6 +4511,7 @@ function onAction(target, event){
       state.chordAdded = false;
       saveProject();
       renderApp();
+      setPlaying(true);
     }
     return true;
   }
@@ -4381,14 +4654,13 @@ function onAction(target, event){
   if(el('#humanize-drums')){ generateDrums(); return true; }
   if(el('#add-drums')){ commitDrums(); return true; }
   if(el('#generate-chords')){ generateChords(); return true; }
-  if(el('#add-chords')){ state.chordAdded = true; saveProject(); renderApp(); notify('Chords added to the arrangement'); return true; }
+  if(el('#add-chords')){ state.chordAdded = true; returnToSketch('Chords are in the project'); return true; }
   if(el('#generate-vocals')){ generateVocals(); return true; }
-  if(el('#add-vocal')){
+  if(el('#add-vocal') || el('#use-melody')){
+    if(el('#use-melody')){ commitMelody(); return true; }
     if(!vocalUrl && !vocalBuffer){ notify('Load or record a vocal first'); return true; }
     state.vocalAdded = true;
-    saveProject();
-    renderApp();
-    notify('Vocal track added');
+    returnToSketch('Vocals are in the project');
     return true;
   }
   if(el('#record-vocal')){ startVocal(); return true; }
@@ -4415,6 +4687,7 @@ function onAction(target, event){
   const openProjBtn = el('[data-open-project]');
   if(openProjBtn){ openProject(openProjBtn.dataset.openProject); return true; }
   if(el('#create-project')){ createProject(); return true; }
+  if(el('#generate-starter')){ generateStarter(); return true; }
   if(el('#save-settings')){
     const nextKey=document.querySelector('#settings-key').value;
     state.name=document.querySelector('#settings-name').value||'Untitled idea';
