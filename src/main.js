@@ -371,6 +371,7 @@ let sequenceStep = 0;
 let metronomeOn = false;
 let audioContext;
 const bufferCache = new Map();
+const sfBufferCache = new Map();
 let vocalBuffer = null;
 const customBuffers = { kick: null, snare: null, clap: null, hat: null, openhat: null, bass: null };
 let activePickingLane = null;
@@ -440,19 +441,32 @@ function ensureToneEngine(){
   return toneEngine;
 }
 
-function triggerToneLead(step){
-  const engine = ensureToneEngine();
-  if (!engine || !engine.synth) return;
+function resetMasterGraph(){
+  masterInputGain = masterOutputGain = masterLimiterNode = masterMaximizerGain = null;
+  sidechainDuckerGain = eqLow = eqMid = eqHigh = null;
+  masterFilterNode = masterAnalyserNode = reverbGain = null;
+  delayNode = delayGain = delayFeedback = reverbConvolver = null;
+  drumBusInput = drumPunchShaper = drumBusGain = drumBypassGain = null;
+}
 
-  if (!toneEngine.transportStarted) {
-    Tone.start();
-    toneEngine.transportStarted = true;
+async function unlockAudio(){
+  try{
+    if(Tone?.start) await Tone.start();
+    const raw = Tone?.getContext?.()?.rawContext || Tone?.context?.rawContext;
+    if(raw && audioContext && raw !== audioContext){
+      resetMasterGraph();
+      bufferCache.clear();
+      sfBufferCache.clear();
+      vocalBuffer = null;
+    }
+    if(raw) audioContext = raw;
+  }catch{}
+  audioContext ||= new AudioContext();
+  if(audioContext.state === 'suspended'){
+    try{ await audioContext.resume(); }catch{}
   }
-
-  const scale = scaleForKey?.() || ['C4', 'E4', 'G4', 'A4'];
-  const base = scale[Math.abs(step) % scale.length] || 'C4';
-  const leadNote = step % 4 === 0 ? base : scale[(Math.abs(step) + 1) % scale.length] || base;
-  engine.synth.triggerAttackRelease(leadNote, '16n', undefined, 0.22);
+  initMasterChain();
+  return audioContext;
 }
 
 function triggerToneDrum(layer, velocity = 0.75){
@@ -484,74 +498,90 @@ function syncToneTransport(){
   Tone.Transport.bpm.value = Number(state.bpm || 92);
   Tone.Transport.swing = (Number(state.swing || 0) / 100) * 0.65;
   Tone.Transport.swingSubdivision = '16n';
+  try{ Tone.Transport.position = 0; }catch{}
+}
+
+function updatePlayhead(step){
+  const block=document.querySelector('.arrange-block');
+  if(block) block.style.setProperty('--play',`${step/16}`);
+  const head=document.querySelector('#playhead');
+  if(head) head.style.left=`${(step/16)*100}%`;
+  const barEl=document.querySelector('.bar-count');
+  if(barEl) barEl.textContent=`${state.songMode?(state.songSection+1):1} · ${Math.floor(step/4)+1} · ${(step%4)+1}`;
+  document.querySelectorAll('.step').forEach(node=>{
+    node.classList.toggle('now',Number(node.dataset.step)===step);
+  });
+  document.querySelectorAll('.note').forEach(el=>{
+    const note=state.pattern[Number(el.dataset.i)];
+    if(!note) return;
+    el.classList.toggle('playing',playing && step>=note.x && step<(note.x+note.w));
+  });
+}
+
+function advancePlayback(when){
+  if(!playing) return;
+  const step=sequenceStep%16;
+  try{ playDrumStep(step, when); }catch{}
+  updatePlayhead(step);
+  if(step===15 && state.songMode && state.sections?.length){
+    const current=state.sections[state.songSection]||state.sections[0];
+    const totalBars=current?.bars||1;
+    if(songBarCount>=totalBars-1){
+      songBarCount=0;
+      state.songSection=(state.songSection+1)%state.sections.length;
+      updateSectionUI();
+    } else {
+      songBarCount+=1;
+    }
+  }
+  sequenceStep=(sequenceStep+1)%16;
+}
+
+function startTimeoutLoop(){
+  const tick=()=>{
+    if(!playing) return;
+    advancePlayback();
+    const sixteenth=((60/state.bpm)/4)*1000;
+    timer=setTimeout(tick, sixteenth);
+  };
+  tick();
 }
 
 function startToneLoop(){
-  if (!Tone || !Tone.Transport) return;
-  syncToneTransport();
-  if (toneLoop.sequence) {
-    toneLoop.sequence.stop();
-    toneLoop.sequence.dispose();
-    toneLoop.sequence = null;
-  }
-
-  const advanceStep = () => {
-    const step = sequenceStep % 16;
-    triggerToneLead(step);
-    playDrumStep(step);
-
-    const head = document.querySelector('#playhead');
-    if (head) head.style.left = `${(step / 16) * 100}%`;
-
-    const barEl = document.querySelector('.bar-count');
-    if (barEl) barEl.textContent = `${state.songMode ? (state.songSection + 1) : 1} · ${Math.floor(step / 4) + 1} · ${(step % 4) + 1}`;
-
-    document.querySelectorAll('.step').forEach(node => {
-      node.classList.toggle('now', Number(node.dataset.step) === step);
-    });
-
-    if (step === 15) {
-      if (state.songMode && state.sections?.length) {
-        const current = state.sections[state.songSection] || state.sections[0];
-        const totalBars = current?.bars || 1;
-        if (songBarCount >= totalBars - 1) {
-          songBarCount = 0;
-          state.songSection = (state.songSection + 1) % state.sections.length;
-          updateSectionUI();
-        } else {
-          songBarCount += 1;
-        }
-      }
+  stopToneLoop();
+  toneLoop.gotTick = false;
+  if(Tone?.Transport){
+    try{
+      syncToneTransport();
+      toneLoop.sequence=new Tone.Sequence(()=>{
+        toneLoop.gotTick = true;
+        advancePlayback();
+      }, Array.from({length:16},(_,i)=>i), '16n');
+      toneLoop.sequence.start(0);
+      Tone.Transport.start('+0.02');
+      timer = setTimeout(()=>{
+        if(!playing || toneLoop.gotTick) return;
+        stopToneLoop();
+        startTimeoutLoop();
+      }, 280);
+      return;
+    }catch{
+      stopToneLoop();
     }
-
-    const noteEls = document.querySelectorAll('.note');
-    noteEls.forEach(el => {
-      const index = Number(el.dataset.i);
-      const note = state.pattern[index];
-      if (!note) return;
-      const isNow = playing && step >= note.x && step < note.x + note.w;
-      el.classList.toggle('playing', isNow);
-    });
-
-    sequenceStep = (sequenceStep + 1) % 16;
-  };
-
-  toneLoop.sequence = new Tone.Sequence((time) => {
-    advanceStep();
-  }, Array.from({ length: 16 }, (_, i) => i), '16n');
-
-  toneLoop.sequence.start(0);
-  Tone.Transport.start('+0.05');
+  }
+  startTimeoutLoop();
 }
 
 function stopToneLoop(){
+  clearTimeout(timer);
+  clearInterval(timer);
   if (Tone && Tone.Transport) {
     Tone.Transport.stop();
     Tone.Transport.cancel(0);
   }
   if (toneLoop.sequence) {
-    toneLoop.sequence.stop();
-    toneLoop.sequence.dispose();
+    try{ toneLoop.sequence.stop(); }catch{}
+    try{ toneLoop.sequence.dispose(); }catch{}
     toneLoop.sequence = null;
   }
 }
@@ -831,9 +861,7 @@ async function getAudioBuffer(url){
 async function preloadKit(kitId){
   const kit = sessionKits[kitId];
   if(!kit) return;
-  for(const lane of lanes){
-    if(kit[lane]) getAudioBuffer(kit[lane]);
-  }
+  await Promise.all(lanes.map(lane => kit[lane] ? getAudioBuffer(kit[lane]) : null));
 }
 
 async function prepareVocalBuffer(blobUrl){
@@ -919,23 +947,24 @@ function triggerSoundfontLoad(instId){
   script.onerror = () => { soundfontLoading[sfName] = false; };
   document.head.appendChild(script);
 }
-function playSoundfontNote(sfName, note, duration, volume){
+function playSoundfontNote(sfName, note, duration, volume, when){
   const data = soundfontCache[sfName]?.[note];
-  if(!data) return false;
-  try {
-    const audio = new Audio(data);
-    audio.volume = Math.max(0, Math.min(1, volume * 1.6));
-    audio.play().catch(()=>{});
-    setTimeout(() => { audio.pause(); }, (duration + 0.6) * 1000);
+  if(!data || !audioContext) return false;
+  const key = `${sfName}|${note}`;
+  const buf = sfBufferCache.get(key);
+  if(buf){
+    playSampleBuffer(buf, Math.min(1.4, volume * 1.5), false, 1, when);
     return true;
-  } catch {
-    return false;
   }
+  fetch(data).then(r=>r.arrayBuffer()).then(arr=>audioContext.decodeAudioData(arr.slice(0))).then(decoded=>{
+    sfBufferCache.set(key, decoded);
+  }).catch(()=>{});
+  return false;
 }
-function tone(note,duration=.32,volume=.08,instrument=state.instrument||'rhodes',useSidechain=false){
+function tone(note,duration=.32,volume=.08,instrument=state.instrument||'rhodes',useSidechain=false,when=null){
   audioContext||=new AudioContext();
   if(audioContext.state==='suspended') audioContext.resume();
-  const now=audioContext.currentTime;
+  const now=when ?? audioContext.currentTime;
   const freq=noteFrequency(note);
   if(!freq||isNaN(freq)) return;
   const high=Math.min(1,Math.max(0,((69+12*Math.log2(freq/440))-50)/30));
@@ -943,7 +972,7 @@ function tone(note,duration=.32,volume=.08,instrument=state.instrument||'rhodes'
   const sfName = soundfontNames[instrument];
   if(sfName){
     triggerSoundfontLoad(instrument);
-    if(playSoundfontNote(sfName, note, duration, voicedVolume)) return;
+    if(playSoundfontNote(sfName, note, duration, voicedVolume, now)) return;
   }
 
   const masterGain=audioContext.createGain();
@@ -1300,10 +1329,6 @@ function hit(name,volume=.75,time=null){
   if(buf){
     playSampleBuffer(buf, finalVol, true, playbackRate, time, finalPan);
   } else {
-    const voice = new Audio(publicUrl(url));
-    voice.volume = Math.max(0, Math.min(1, finalVol));
-    if(playbackRate !== 1.0) voice.playbackRate = Math.max(0.25, Math.min(4.0, playbackRate));
-    voice.play().catch(()=>{});
     getAudioBuffer(url);
   }
 }
@@ -1402,10 +1427,6 @@ function playVocalOnce(){
     }
     source.start();
   } else {
-    const voice = new Audio(publicUrl(vocalUrl));
-    voice.volume = mixVol('vocals');
-    if(state.vocals.chain==='Lo-fi') voice.playbackRate=.92;
-    voice.play().catch(()=>{});
     prepareVocalBuffer(vocalUrl);
   }
 }
@@ -1451,7 +1472,7 @@ function partAudible(part){
 function projectHasMusic(){
   return !!(state.melodyAdded || state.drumsAdded || state.chordAdded || state.vocalAdded);
 }
-function playDrumStep(step){
+function playDrumStep(step, when=null){
   const activeDrums = isTrackActive('drums') && partAudible('drums');
   const activeKeys = isTrackActive('keys') && partAudible('keys');
   const activeChords = isTrackActive('chords') && partAudible('chords');
@@ -1464,14 +1485,14 @@ function playDrumStep(step){
         const vel = drumVelocity(name, step) * mixVol('drums');
         if(roll > 1){
           const stepDur = (60 / state.bpm) / 4;
-          const now = audioContext ? audioContext.currentTime : 0;
+            const now = when ?? (audioContext ? audioContext.currentTime : 0);
           for(let k = 0; k < roll; k++){
-            const subTime = k === 0 ? null : (now + (stepDur / roll) * k);
+            const subTime = k === 0 ? when : (now + (stepDur / roll) * k);
             const subVel = vel * (0.85 + 0.15 * (k / roll));
             hit(name, subVel, subTime);
           }
         } else {
-          hit(name, vel);
+          hit(name, vel, when);
         }
       }
     }
@@ -1482,18 +1503,18 @@ function playDrumStep(step){
     state.pattern.filter(note => note.x === step).forEach(note => {
       const hold = Math.max(sixteenth * .75, note.w * sixteenth * .92);
       const accent = note.x % 8 === 0 ? 1 : note.x % 4 === 0 ? .84 : .66;
-      tone(note.n, hold, .14 * accent * mixVol('keys'), state.instrument, false);
+      tone(note.n, hold, .14 * accent * mixVol('keys'), state.instrument, false, when);
     });
   }
 
   if(activeChords && mixVol('chords') && step % 4 === 0){
     const chord = currentChord();
     const tones = chordTones[chord] || getChordNotes(chord);
-    tones.forEach(note => tone(note, .78, .045 * mixVol('chords'), state.instrument === 'pluck' ? 'rhodes' : state.instrument, true));
+    tones.forEach(note => tone(note, .78, .045 * mixVol('chords'), state.instrument === 'pluck' ? 'rhodes' : state.instrument, true, when));
   }
 
   if(activeVocals && step === 0) playVocalOnce();
-  if(metronomeOn && step % 4 === 0) tone(step === 0 ? 'C6' : 'C5', .05, .035, 'pluck');
+  if(metronomeOn && step % 4 === 0) tone(step === 0 ? 'C6' : 'C5', .05, .035, 'pluck', false, when);
 }
 
 function projectSnapshot(){
@@ -1922,6 +1943,7 @@ function generateMelody(onlyCurrent=false){
   scrollPianoToNotes();
 }
 function generateDrums(){
+  if(typeof pushDrumHistory === 'function') pushDrumHistory();
   const kit=sessionKits[state.kit];
   for(const lane of lanes) state.drums[lane]=new Set(kit.steps[lane]);
   for(const step of [1,3,7,9,11,15]) Math.random()>.4?state.drums.hat.add(step):state.drums.hat.delete(step);
@@ -2147,8 +2169,382 @@ function stageMelody(){
     ${arrangement()}
   </div>`;
 }
+let doctorDetailsOpen = false;
+const drumHistory = [];
+
+function pushDrumHistory(){
+  drumHistory.push({
+    drums: Object.fromEntries(lanes.map(l => [l, Array.from(state.drums[l] || [])])),
+    drumRolls: JSON.parse(JSON.stringify(state.drumRolls || {})),
+    sidechain: state.sidechain,
+    bassTuned: state.bassTuned
+  });
+  if(drumHistory.length > 25) drumHistory.shift();
+}
+
+function undoBeatFix(){
+  if(!drumHistory.length){
+    notify('No previous beat state to undo');
+    return;
+  }
+  const prev = drumHistory.pop();
+  for(const lane of lanes){
+    state.drums[lane] = new Set(prev.drums[lane] || []);
+  }
+  state.drumRolls = prev.drumRolls || {};
+  if(prev.sidechain !== undefined) state.sidechain = prev.sidechain;
+  if(prev.bassTuned !== undefined) state.bassTuned = prev.bassTuned;
+  markDrumsInProject();
+  saveProject();
+  renderApp();
+  notify('↺ Reverted beat to previous state');
+}
+
+function analyzeBeat(state){
+  const issues = [];
+  const positives = [];
+  let deductions = 0;
+
+  const kick = state.drums.kick || new Set();
+  const snare = state.drums.snare || new Set();
+  const clap = state.drums.clap || new Set();
+  const hat = state.drums.hat || new Set();
+  const openhat = state.drums.openhat || new Set();
+  const bass = state.drums.bass || new Set();
+  const rolls = state.drumRolls || {};
+
+  const totalHits = kick.size + snare.size + clap.size + hat.size + openhat.size + bass.size;
+
+  // 1. Sparse / Empty pattern
+  if(totalHits < 4){
+    issues.push({
+      id: 'empty_pattern',
+      severity: 'critical',
+      title: 'Empty / Sparse Beat',
+      desc: 'Pattern has very few or zero hits, leaving no rhythmic groove.',
+      fixLabel: 'Populate Pocket'
+    });
+    deductions += 60;
+  }
+
+  // 2. Downbeat Anchor (Step 0)
+  const hasDownbeat = kick.has(0) || bass.has(0);
+  if(!hasDownbeat && totalHits >= 4){
+    issues.push({
+      id: 'missing_downbeat',
+      severity: 'warning',
+      title: 'Missing Beat 1 Anchor',
+      desc: 'No kick or sub-bass on Beat 1 (Step 1). Groove lacks grounding.',
+      lane: 'kick',
+      step: 0,
+      fixLabel: 'Anchor Beat 1'
+    });
+    deductions += 18;
+  } else if(hasDownbeat){
+    positives.push('Beat 1 Downbeat Anchored');
+  }
+
+  // 3. Backbeat Presence (Step 4 & 12 in 16-step grid, or Step 8 for halftime trap)
+  const isTrap = state.kit === 'trap';
+  const hasBackbeat1 = snare.has(4) || clap.has(4);
+  const hasBackbeat2 = snare.has(12) || clap.has(12);
+  const hasTrapBackbeat = snare.has(8) || clap.has(8);
+  const hasSolidBackbeat = isTrap ? hasTrapBackbeat : (hasBackbeat1 && hasBackbeat2);
+
+  if(!hasSolidBackbeat && totalHits >= 4){
+    issues.push({
+      id: 'weak_backbeat',
+      severity: 'warning',
+      title: isTrap ? 'Missing Halftime Snare (Step 9)' : 'Missing Backbeat (Steps 5 & 13)',
+      desc: 'Snare/Clap does not lock the standard commercial backbeat pulse.',
+      lane: 'snare',
+      fixLabel: 'Lock Backbeat'
+    });
+    deductions += 20;
+  } else if(hasSolidBackbeat){
+    positives.push('Punchy Backbeat Pocket');
+  }
+
+  // 4. Snare Masking (Kick colliding directly on primary backbeats)
+  const backbeatSteps = isTrap ? [8] : [4, 12];
+  const snareClashes = backbeatSteps.filter(s => kick.has(s) && (snare.has(s) || clap.has(s)));
+  if(snareClashes.length > 0 && state.kit !== 'house'){
+    issues.push({
+      id: 'snare_masking',
+      severity: 'warning',
+      title: `Snare Masking (Step ${snareClashes.map(s => s + 1).join(', ')})`,
+      desc: 'Kick lands directly on the snare backbeat, muddying the transient crack.',
+      lane: 'kick',
+      step: snareClashes[0],
+      fixLabel: 'De-conflict Snare'
+    });
+    deductions += 14;
+  }
+
+  // 5. Low-End Sub Mud & Collision (Kick + Bass collisions or rapid adjacent kicks)
+  const subCollisions = [...kick].filter(s => bass.has(s));
+  const adjacentKicks = [...kick].filter(s => kick.has((s + 1) % 16));
+  const hasSubMud = (subCollisions.length > 0 && state.sidechain === false) || adjacentKicks.length > 0;
+
+  if(hasSubMud){
+    issues.push({
+      id: 'low_end_mud',
+      severity: 'critical',
+      title: 'Low-End Mud & Collision',
+      desc: subCollisions.length > 0 && state.sidechain === false
+        ? `Kick and 808 sub trigger simultaneously at step ${subCollisions.map(s => s+1).join(', ')} without sidechain ducking.`
+        : 'Rapid adjacent kicks trigger without breathing room, muddying sub frequencies.',
+      lane: 'bass',
+      fixLabel: 'Clean Low-End'
+    });
+    deductions += 22;
+  } else if(kick.size > 0 && bass.size > 0){
+    positives.push('Separated Kick & Bass Space');
+  }
+
+  // 6. Hi-Hat Clashing (Open Hat and Closed Hat colliding on same step)
+  const hatClashes = [...openhat].filter(s => hat.has(s));
+  if(hatClashes.length > 0){
+    issues.push({
+      id: 'hat_clash',
+      severity: 'info',
+      title: `Open/Closed Hat Overlap (Step ${hatClashes.map(s => s + 1).join(', ')})`,
+      desc: 'Open hat and closed hat fire on the same step without choke.',
+      lane: 'hat',
+      step: hatClashes[0],
+      fixLabel: 'Choke Hats'
+    });
+    deductions += 12;
+  } else if(hat.size > 0){
+    positives.push('Clean Hi-Hat Air');
+  }
+
+  // 7. Sub-Bass Ratchet Distortion (Rolls on kick or bass)
+  const subRolls = [];
+  for(const lane of ['kick', 'bass']){
+    if(rolls[lane]){
+      for(const [s, r] of Object.entries(rolls[lane])){
+        if(r > 1) subRolls.push(`${lane.toUpperCase()} Step ${Number(s) + 1} (${r}x)`);
+      }
+    }
+  }
+  if(subRolls.length > 0){
+    issues.push({
+      id: 'sub_ratchet',
+      severity: 'warning',
+      title: 'Sub-Bass Ratchet Flutter',
+      desc: `High-frequency rolls on low-end (${subRolls.join(', ')}) cause speaker rumble & distortion.`,
+      lane: 'bass',
+      fixLabel: 'Smooth Sub Rolls'
+    });
+    deductions += 16;
+  }
+
+  // 8. 808 Tuning Check
+  if(bass.size > 0 && state.bassTuned === false){
+    issues.push({
+      id: 'untuned_808',
+      severity: 'info',
+      title: '808 Sub-Bass Not Auto-Tuned',
+      desc: '808 sub plays at a static pitch instead of following chord root notes.',
+      lane: 'bass',
+      fixLabel: 'Auto-Tune 808'
+    });
+    deductions += 10;
+  } else if(bass.size > 0 && state.bassTuned !== false){
+    positives.push('808 Harmonically Tuned to Chords');
+  }
+
+  const rawScore = Math.max(15, Math.min(100, 100 - deductions));
+  const score = issues.length === 0 ? 100 : rawScore;
+  let grade = 'Commercial Ready';
+  let badgeClass = 'good';
+  if(score < 55){
+    grade = 'Cluttered / Rough';
+    badgeClass = 'bad';
+  } else if(score < 78){
+    grade = 'Needs Polish';
+    badgeClass = 'warn';
+  } else if(score < 90){
+    grade = 'Solid Pocket';
+    badgeClass = 'good';
+  }
+
+  return {
+    score,
+    grade,
+    badgeClass,
+    issues,
+    positives: positives.slice(0, 4)
+  };
+}
+
+function quickFixBeat(issueId = null){
+  pushDrumHistory();
+
+  const analysis = analyzeBeat(state);
+  const issuesToFix = issueId ? analysis.issues.filter(i => i.id === issueId) : analysis.issues;
+  if(issuesToFix.length === 0){
+    notify('Beat is already in optimal commercial pocket (100%)');
+    return;
+  }
+
+  const fixNames = [];
+
+  // Fix: empty pattern
+  if(issuesToFix.some(i => i.id === 'empty_pattern')){
+    const defaultSteps = sessionKits[state.kit]?.steps || sessionKits.rnb.steps;
+    for(const lane of lanes){
+      state.drums[lane] = new Set(defaultSteps[lane] || []);
+    }
+    fixNames.push('Restored kit pocket');
+  }
+
+  // Fix: missing downbeat
+  if(issuesToFix.some(i => i.id === 'missing_downbeat')){
+    state.drums.kick.add(0);
+    fixNames.push('Anchored Beat 1 downbeat');
+  }
+
+  // Fix: weak backbeat
+  if(issuesToFix.some(i => i.id === 'weak_backbeat')){
+    if(state.kit === 'trap'){
+      state.drums.snare.add(8);
+    } else {
+      state.drums.snare.add(4);
+      state.drums.snare.add(12);
+    }
+    fixNames.push('Locked snare backbeat');
+  }
+
+  // Fix: snare masking
+  if(issuesToFix.some(i => i.id === 'snare_masking')){
+    const backbeats = state.kit === 'trap' ? [8] : [4, 12];
+    for(const s of backbeats){
+      if(state.drums.snare.has(s) || state.drums.clap.has(s)){
+        state.drums.kick.delete(s);
+      }
+    }
+    fixNames.push('De-conflicted snare hits');
+  }
+
+  // Fix: low-end mud
+  if(issuesToFix.some(i => i.id === 'low_end_mud')){
+    const kicks = [...state.drums.kick].sort((a, b) => a - b);
+    for(let i = 0; i < kicks.length; i++){
+      const cur = kicks[i];
+      const next = kicks[(i + 1) % kicks.length];
+      if((next - cur + 16) % 16 === 1){
+        state.drums.kick.delete(next);
+      }
+    }
+    state.sidechain = true;
+    updateDrumBusRouting();
+    fixNames.push('Cleaned sub mud & enabled sidechain');
+  }
+
+  // Fix: hat clash
+  if(issuesToFix.some(i => i.id === 'hat_clash')){
+    for(const s of state.drums.openhat){
+      state.drums.hat.delete(s);
+    }
+    fixNames.push('Choked closed hats on open hats');
+  }
+
+  // Fix: sub ratchet
+  if(issuesToFix.some(i => i.id === 'sub_ratchet')){
+    if(state.drumRolls.kick) state.drumRolls.kick = {};
+    if(state.drumRolls.bass) state.drumRolls.bass = {};
+    fixNames.push('Removed sub ratchets');
+  }
+
+  // Fix: untuned 808
+  if(issuesToFix.some(i => i.id === 'untuned_808')){
+    state.bassTuned = true;
+    fixNames.push('Auto-tuned 808 to chord roots');
+  }
+
+  markDrumsInProject();
+  saveProject();
+  renderApp();
+
+  hit('kick', 0.9);
+  setTimeout(() => hit('snare', 0.8), 220);
+
+  const summary = fixNames.length > 0 ? fixNames.slice(0, 3).join(', ') : 'Beat optimized';
+  notify(`⚡ Beat Doctor: ${summary} (Undo with Ctrl+Z)`);
+}
+
+function renderBeatDoctor(analysis){
+  const issues = analysis.issues;
+  return `<div class="beat-doctor-card" id="beat-doctor-panel">
+    <div class="doctor-header">
+      <div class="doctor-score-box">
+        <div class="doctor-score-badge ${analysis.badgeClass}">
+          <span class="score-num">${analysis.score}%</span>
+          <span class="score-label">${analysis.grade}</span>
+        </div>
+        <div class="doctor-title-box">
+          <div class="doctor-kicker">
+            <span class="doctor-pulse ${analysis.badgeClass}"></span>
+            AI BEAT DOCTOR &amp; GROOVE ANALYZER
+          </div>
+          <p class="doctor-summary">
+            ${issues.length === 0 ? 'Pocket is commercially locked. Transients, low-end, and backbeats are aligned.' : `${issues.length} acoustic/rhythmic ${issues.length === 1 ? 'issue' : 'issues'} detected in this drum pocket.`}
+          </p>
+        </div>
+      </div>
+      <div class="doctor-actions">
+        ${drumHistory.length ? `<button type="button" class="doctor-btn undo-fix-btn" id="undo-beat-fix" title="Undo last beat repair">↺ Undo</button>` : ''}
+        <button type="button" class="doctor-btn quick-fix-btn ${issues.length === 0 ? 'perfect' : 'hot'}" id="quick-fix-beat" title="Instantly resolve rhythmic clashes, low-end mud, and missing anchors">
+          ⚡ Quick Fix Beat
+        </button>
+        <button type="button" class="doctor-btn inspect-btn" id="toggle-doctor-details">
+          ${doctorDetailsOpen ? 'Hide Diagnostics' : 'Inspect Issues'}
+        </button>
+      </div>
+    </div>
+
+    <div class="doctor-issue-tags">
+      ${issues.length ? issues.map(iss => `<span class="issue-pill ${iss.severity}" title="${esc(iss.desc)}"><strong>⚠ ${esc(iss.title)}</strong><button type="button" class="pill-fix-btn" data-fix-issue="${iss.id}">Fix</button></span>`).join('') : '<span class="positive-pill">✓ Clean Low-End</span><span class="positive-pill">✓ Locked Backbeat</span><span class="positive-pill">✓ Beat 1 Downbeat Anchored</span><span class="positive-pill">✓ Choked Hats</span>'}
+    </div>
+
+    ${doctorDetailsOpen ? `
+      <div class="doctor-drawer">
+        <div class="drawer-header">
+          <span>ACOUSTIC &amp; GROOVE DIAGNOSTICS</span>
+          <small>Rules-based analysis of transient collisions, sub phase, and syncopation</small>
+        </div>
+        <div class="doctor-breakdown">
+          ${issues.map(iss => `
+            <div class="doctor-item ${iss.severity}">
+              <div class="item-text">
+                <div class="item-head">
+                  <span class="sev-badge ${iss.severity}">${iss.severity.toUpperCase()}</span>
+                  <strong>${esc(iss.title)}</strong>
+                </div>
+                <p>${esc(iss.desc)}</p>
+              </div>
+              <button type="button" class="item-fix-btn" data-fix-issue="${iss.id}">⚡ ${iss.fixLabel || 'Fix Issue'}</button>
+            </div>
+          `).join('')}
+          ${analysis.positives.map(pos => `
+            <div class="doctor-item positive">
+              <div class="item-text">
+                <strong>✓ ${esc(pos)}</strong>
+                <p>Meets commercial release criteria.</p>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+  </div>`;
+}
+
 function stageDrums(){
   const isPunch = state.drumPunch !== false;
+  const analysis = analyzeBeat(state);
   return `<div class="page-stack">
     ${backToProject()}
     <div class="stage-header"><div><p class="eyebrow">AI DRUMS</p><h1>Program the pocket, then humanize it.</h1></div><span class="session-pill">${esc(sessionKits[state.kit].blurb)}</span></div>
@@ -2159,6 +2555,7 @@ function stageDrums(){
         <span class="punch-led"></span> PUNCH
       </button>
     </div>
+    ${renderBeatDoctor(analysis)}
     <div class="drum-lanes">${lanes.map(lane=>{
       const hasCustom = !!customBuffers[lane];
       const sampleName = state.customSamples?.[lane] || 'Stock kit';
@@ -2190,7 +2587,7 @@ function stageDrums(){
         }).join('')}</div>
       </div>`;
     }).join('')}</div>
-    <div class="take-actions"><button class="page-btn hot" id="humanize-drums">Humanize</button><button class="page-btn" id="add-drums">${state.drumsAdded?'In project':'Add drums'}</button><button class="page-btn" data-open="library">Kits</button><button class="page-btn" id="open-public-sources">Free packs</button></div>
+    <div class="take-actions"><button class="page-btn hot" id="quick-fix-beat-action">⚡ Quick Fix Beat</button><button class="page-btn" id="humanize-drums">Humanize</button><button class="page-btn" id="add-drums">${state.drumsAdded?'In project':'Add drums'}</button><button class="page-btn" data-open="library">Kits</button><button class="page-btn" id="open-public-sources">Free packs</button></div>
     ${arrangement()}
   </div>`;
 }
@@ -2808,34 +3205,18 @@ function updateSectionUI(){
   });
 }
 
-function setPlaying(on){
+async function setPlaying(on){
   playing=on;
+  const playToken = ++setPlaying.token;
   clearTimeout(timer);
   clearInterval(timer);
-  document.querySelector('#play').textContent=on?'Ⅱ':'▶';
-
-  const placePlayhead=step=>{
-    const block=document.querySelector('.arrange-block');
-    if(block)block.style.setProperty('--play',`${step/16}`);
-    const head=document.querySelector('#playhead');
-    if(head)head.style.left=(step/16)*100+'%';
-    const barNum = state.songMode ? (state.songSection + 1) : 1;
-    const barEl = document.querySelector('.bar-count');
-    if(barEl) barEl.textContent=`${barNum} · ${Math.floor(step/4)+1} · ${(step%4)+1}`;
-    document.querySelectorAll('.note').forEach(el => {
-      const i = Number(el.dataset.i);
-      const note = state.pattern[i];
-      if(note){
-        const isNow = playing && step >= note.x && step < (note.x + note.w);
-        el.classList.toggle('playing', isNow);
-      }
-    });
-  };
+  const playBtn=document.querySelector('#play');
+  if(playBtn) playBtn.textContent=on?'Ⅱ':'▶';
 
   if(!on){
     stopToneLoop();
     sequenceStep = 0;
-    placePlayhead(0);
+    updatePlayhead(0);
     document.querySelectorAll('.step.now').forEach(step=>step.classList.remove('now'));
     document.querySelectorAll('.note.playing').forEach(el=>el.classList.remove('playing'));
     if(state.songMode){
@@ -2848,22 +3229,25 @@ function setPlaying(on){
   const audible=(partAudible('keys')&&state.pattern.length)||partAudible('drums')||partAudible('chords')||partAudible('vocals');
   if(!audible){
     playing=false;
-    document.querySelector('#play').textContent='▶';
+    if(playBtn) playBtn.textContent='▶';
     notify('Add a melody, drums, chords, or vocal before playing');
     return;
   }
 
-  audioContext ||= new AudioContext();
-  audioContext.resume();
-  initMasterChain();
+  stopToneLoop();
+  try{
+    await unlockAudio();
+    await preloadKit(state.kit);
+    if(vocalUrl && !vocalBuffer) await prepareVocalBuffer(vocalUrl);
+  }catch{}
+  if(!playing || playToken !== setPlaying.token) return;
   initVisualizer();
   sequenceStep = 0;
   songBarCount = 0;
-  triggerToneLead(sequenceStep);
-  playDrumStep(sequenceStep);
-  placePlayhead(sequenceStep);
+  updatePlayhead(0);
   startToneLoop();
 }
+setPlaying.token = 0;
 
 function renderOfflineTone(ctx, dest, note, time, duration, volume, instrument){
   const freq = noteFrequency(note);
@@ -3925,6 +4309,25 @@ function onAction(target, event){
     return true;
   }
 
+  if(el('#quick-fix-beat') || el('#quick-fix-beat-action')){
+    quickFixBeat();
+    return true;
+  }
+  const fixIssueBtn = el('[data-fix-issue]');
+  if(fixIssueBtn){
+    quickFixBeat(fixIssueBtn.dataset.fixIssue);
+    return true;
+  }
+  if(el('#undo-beat-fix')){
+    undoBeatFix();
+    return true;
+  }
+  if(el('#toggle-doctor-details')){
+    doctorDetailsOpen = !doctorDetailsOpen;
+    renderApp();
+    return true;
+  }
+
   const openSourcesBtn = el('#open-public-sources') || el('#lead-open-sources');
   if(openSourcesBtn){
     openLibrary('sources');
@@ -4409,6 +4812,51 @@ window.addEventListener('keydown', event => {
     setPlaying(!playing);
     return;
   }
+  if(event.ctrlKey || event.metaKey){
+    if(event.key.toLowerCase() === 'z'){
+      if(event.shiftKey){
+        if(future.length){
+          event.preventDefault();
+          history.push(state.pattern.map(note=>({...note})));
+          state.pattern = future.pop();
+          rememberMelodyDraft();
+          saveProject();
+          renderPiano();
+          notify('Redid note edit');
+          return;
+        }
+      } else {
+        if(state.view === 'drums' && drumHistory.length){
+          event.preventDefault();
+          undoBeatFix();
+          return;
+        }
+        if(history.length){
+          event.preventDefault();
+          future.push(state.pattern.map(note=>({...note})));
+          state.pattern = history.pop();
+          rememberMelodyDraft();
+          saveProject();
+          renderPiano();
+          notify('Undid note edit');
+          return;
+        }
+      }
+    } else if(event.key.toLowerCase() === 'y'){
+      if(future.length){
+        event.preventDefault();
+        history.push(state.pattern.map(note=>({...note})));
+        state.pattern = future.pop();
+        rememberMelodyDraft();
+        saveProject();
+        renderPiano();
+        notify('Redid note edit');
+        return;
+      }
+    }
+    return;
+  }
+
   if(event.code === 'KeyZ'){
     event.preventDefault();
     qwertyOctave = Math.max(2, qwertyOctave - 1);
