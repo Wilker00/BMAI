@@ -11,11 +11,12 @@ const number = (value, min, max, field, integer = false) => {
 export function validateProject(project, { keys = [], kits = [] } = {}) {
   if(!object(project) || !Array.isArray(project.pattern) || !object(project.drums)) fail('project structure');
   if(project.schemaVersion !== undefined && project.schemaVersion !== 1) fail('schema version');
-  for(const field of ['name', 'description', 'prompt', 'instrument']) {
+  for(const field of ['name', 'description', 'prompt', 'instrument', 'chordInstrument']) {
     if(project[field] !== undefined && typeof project[field] !== 'string') fail(field);
   }
   if(project.key !== undefined && (typeof project.key !== 'string' || (keys.length && !keys.includes(project.key)))) fail('key');
   if(project.kit !== undefined && (typeof project.kit !== 'string' || (kits.length && !kits.includes(project.kit)))) fail('kit');
+  if(project.meter !== undefined && project.meter !== '4/4' && project.meter !== '3/4' && project.meter !== '6/8') fail('meter');
   for(const [field, min, max, integer] of [['bpm',40,240], ['swing',0,60], ['idea',0,3,true], ['songSection',0,127,true]]) {
     if(project[field] !== undefined) number(project[field], min, max, field, integer);
   }
@@ -70,6 +71,7 @@ export function validateProject(project, { keys = [], kits = [] } = {}) {
       if(value.vol !== undefined) number(value.vol, 0, max, `${field} volume`);
       if(value.pan !== undefined) number(value.pan, -1, 1, `${field} pan`);
       if(value.mute !== undefined && typeof value.mute !== 'boolean') fail(`${field} mute`);
+      if(value.solo !== undefined && typeof value.solo !== 'boolean') fail(`${field} solo`);
     }
   }
   for(const [field, min, max] of [['eq',-24,24]]) {
@@ -79,6 +81,11 @@ export function validateProject(project, { keys = [], kits = [] } = {}) {
   if(project.chips !== undefined && (!Array.isArray(project.chips) || project.chips.some(chip => typeof chip !== 'string'))) fail('chips');
   if(project.chords !== undefined) {
     if(!object(project.chords) || !Array.isArray(project.chords.bars) || !project.chords.bars.length || project.chords.bars.length > 64 || project.chords.bars.some(chord => typeof chord !== 'string' || !/^[A-G][b#]?[a-zA-Z0-9+#()-]*$/.test(chord))) fail('chords');
+  }
+  if(project.chordVoice !== undefined){
+    if(!object(project.chordVoice)) fail('chord voice');
+    if(project.chordVoice.inversion !== undefined) number(project.chordVoice.inversion, 0, 2, 'chord inversion', true);
+    if(project.chordVoice.octave !== undefined) number(project.chordVoice.octave, -1, 1, 'chord octave', true);
   }
   if(project.sections !== undefined) {
     if(!Array.isArray(project.sections) || project.sections.length > 128) fail('sections');

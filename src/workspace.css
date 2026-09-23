@@ -71,7 +71,7 @@
 }
 .drum-lanes .drum-lane {
   display: grid;
-  grid-template-columns: minmax(108px, 156px) 96px minmax(0, 1fr);
+  grid-template-columns: minmax(108px, 156px) 118px minmax(0, 1fr);
   gap: 10px;
   align-items: stretch;
   padding: 6px 8px;
@@ -217,7 +217,7 @@
 
 @media(max-width: 760px) {
   .drum-lanes .drum-lane {
-    grid-template-columns: minmax(0, 1fr) 96px;
+    grid-template-columns: minmax(0, 1fr) 118px;
     gap: 6px;
   }
   .drum-lanes .steps {
@@ -228,14 +228,45 @@
   }
 }
 
-/* Audio Spectrum Visualizer */
-.spectrum-canvas {
-  height: 24px;
-  width: 105px;
-  background: #1a1a1a;
+/* Audio Spectrum Visualizer — recessed LED meter */
+.spectrum-meter {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 2px;
   border: 1px solid #3a3a3a;
-  border-radius: 4px;
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, #242424 0%, #141414 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.07),
+    0 1px 0 #0c0c0c;
+}
+.spectrum-meter::before,
+.spectrum-meter::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 1px;
+  background: linear-gradient(180deg, #5a5a5a, #2a2a2a);
+  pointer-events: none;
+  z-index: 1;
+}
+.spectrum-meter::before { left: 5px; }
+.spectrum-meter::after { right: 5px; }
+.spectrum-canvas {
   display: block;
+  width: 168px;
+  height: 28px;
+  border: 1px solid #1c1c1c;
+  border-radius: 5px;
+  background: #0a0a0a;
+  box-shadow:
+    inset 0 1px 3px #000,
+    inset 0 -1px 0 #1a1a1a;
 }
 
 /* Studio FX Rack */
@@ -413,6 +444,23 @@
 .pot.compact.bipolar::after {
   height: 5px;
 }
+.pot.tiny {
+  width: 32px;
+  height: 32px;
+  margin: 0;
+}
+.pot.tiny .pot-track,
+.pot.tiny .pot-arc {
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+}
+.pot.tiny .pot-cap {
+  inset: 6px;
+}
+.pot.tiny .pot-cap i {
+  top: 2px;
+  height: 7px;
+}
 .lane-desk {
   display: flex;
   align-items: flex-end;
@@ -514,6 +562,19 @@
   text-align: center;
   font: 8px var(--mono);
   color: #cfcfcf;
+}
+.lane-flags {
+  display: flex;
+  gap: 4px;
+}
+.lane-flags .strip-mute {
+  width: 22px;
+  height: 18px;
+  font-size: 9px;
+}
+.drum-lane.is-muted .lane-info,
+.drum-lane.is-muted .lane-desk {
+  opacity: .42;
 }
 
 /* Channel faders */
@@ -643,7 +704,15 @@
   border-color: #f2f2f2;
   color: #141414;
 }
-.channel-strip.is-muted .channel-fader {
+.strip-switches {
+  display: flex;
+  gap: 6px;
+}
+.strip-pan {
+  margin-top: 2px;
+}
+.channel-strip.is-muted .channel-fader,
+.channel-strip.is-muted .strip-pan {
   opacity: .4;
 }
 @media (max-width: 760px) {
@@ -845,154 +914,11 @@
   padding: 4px 8px !important;
 }
 
-/* Sound Library Tabs & Public Sources Hub */
+/* Sound library */
 .library-card {
   max-width: 820px !important;
   max-height: 85vh;
   overflow-y: auto;
-}
-.library-tabs {
-  display: flex;
-  gap: 8px;
-  margin: 14px 0 16px;
-  border-bottom: 1px solid #3a3a3a;
-  padding-bottom: 10px;
-}
-.lib-tab {
-  background: #1a1a1a;
-  border: 1px solid #3a3a3a;
-  border-radius: 6px;
-  color: #a3a3a3;
-  font: 10px var(--mono);
-  padding: 7px 12px;
-  cursor: pointer;
-  transition: all .15s ease;
-}
-.lib-tab:hover {
-  border-color: #8f8f8f;
-  color: #f5f5f5;
-}
-.lib-tab.active {
-  background: #3a3a3a;
-  border-color: #f5f5f5;
-  color: #f3f3f3;
-  box-shadow:none;
-}
-.sources-intro {
-  background: #1a1a1a;
-  border: 1px solid #3a3a3a;
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-}
-.sources-intro h3 {
-  margin: 0 0 6px;
-  font-size: 13px;
-  color: #f0f0f0;
-}
-.sources-intro p {
-  margin: 0;
-  font-size: 10px;
-  color: #a0a0a0;
-  line-height: 1.5;
-}
-.sources-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
-}
-.source-card {
-  background: #1a1a1a;
-  border: 1px solid #3a3a3a;
-  border-radius: 8px;
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  transition: border-color .15s;
-}
-.source-card:hover {
-  border-color: #8f8f8f;
-}
-.source-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.source-header h4 {
-  margin: 0;
-  font-size: 12px;
-  color: #f3f3f3;
-}
-.source-badge {
-  font: 8px var(--mono);
-  letter-spacing: .08em;
-  padding: 3px 6px;
-  border-radius: 4px;
-  background: #3a3a3a;
-  color: #f5f5f5;
-  font-weight: 700;
-}
-.source-badge.cc0 {
-  background: #143126;
-  color: #55f1b1;
-}
-.source-badge.archive {
-  background: #1a1a1a;
-  color: #a3a3a3;
-}
-.source-badge.soundfont {
-  background: #1a1a1a;
-  color: #f5f5f5;
-}
-.source-card p {
-  margin: 0;
-  font-size: 10px;
-  color: #919191;
-  line-height: 1.5;
-}
-.source-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.source-tags span {
-  font: 8px var(--mono);
-  background: #1a1a1a;
-  border: 1px solid #3a3a3a;
-  border-radius: 3px;
-  padding: 2px 5px;
-  color: #979797;
-}
-.source-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: auto;
-  padding-top: 8px;
-  border-top: 1px solid #1a1a1a;
-}
-.source-link-btn {
-  background: #a0a0a0;
-  color: #ffffff;
-  text-decoration: none;
-  font: 9px var(--mono);
-  font-weight: 700;
-  padding: 5px 10px;
-  border-radius: 4px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: opacity .15s;
-}
-.source-link-btn:hover {
-  opacity: .9;
-}
-.source-tip {
-  font: 8px var(--mono);
-  color: #8f8f8f;
 }
 
 /* Factory Vocals Grid */
@@ -1280,37 +1206,6 @@
   width: 100%;
   height: 100%;
   display: block;
-}
-
-/* Public Sound Sources Modal */
-.source-card {
-  border: 1px solid #3a3a3a;
-  border-radius: 8px;
-  padding: 12px 14px;
-  background: #1a1a1a;
-  transition: border-color 0.15s;
-}
-.source-card:hover {
-  border-color: #939393;
-}
-.source-card h4 {
-  margin: 0 0 4px 0;
-  font-size: 13px;
-}
-.source-card h4 a {
-  color: #f5f5f5;
-  text-decoration: none;
-  font-weight: 700;
-}
-.source-card h4 a:hover {
-  text-decoration: underline;
-  color: #f5f5f5;
-}
-.source-card p {
-  margin: 0;
-  font-size: 11px;
-  color: #a0a0a0;
-  line-height: 1.45;
 }
 
 /* Beat check */

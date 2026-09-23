@@ -20,9 +20,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.inspector-dock .preset-art { display: flex; }
-.inspector-dock .preset-art .equipment-art { width: 76px; height: 70px; right: 4px; }
-.inspector-dock .art-label { max-width: calc(100% - 70px); font-size: 8px; }
+.inspector-dock .preset-art { display: block; }
+.inspector-dock .preset-art .equipment-art { width: 40px; height: 30px; right: 0; top: 50%; }
+.inspector-dock .art-label { position: absolute; left: 3px; bottom: 1px; z-index: 1; max-width: calc(100% - 4px); font-size: 6px; line-height: 1; }
 .project-jumps .choice-card {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);
