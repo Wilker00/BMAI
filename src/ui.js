@@ -35,6 +35,11 @@ export const guides = {
     kicker: 'EXPORT',
     title: 'Export',
     steps: ['Master WAV is the stereo mix. Stems are separate files.', 'MIDI is notes only.', 'Download project keeps samples for another browser.']
+  },
+  settings: {
+    kicker: 'SESSION',
+    title: 'Settings',
+    steps: ['Project name and key are stored with every save.', 'Swing and drum punch apply globally to all parts.', 'Danger zone lets you reset or start a completely new idea.']
   }
 };
 

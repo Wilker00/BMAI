@@ -1,3 +1,5 @@
+import { migrateProjectToV3 } from './project-format.js';
+
 // Project JSON stores references; IndexedDB owns the audio bytes between visits.
 const DATABASE = 'bmai-audio-assets';
 const STORE = 'assets';
@@ -118,12 +120,11 @@ function isObject(value) {
 
 function cloneProject(snapshot) {
   if (!isObject(snapshot)) throw new Error('Invalid project: expected a JSON object.');
-  if (snapshot.schemaVersion !== undefined && snapshot.schemaVersion !== 1) {
+  const version = snapshot.schemaVersion === undefined ? 1 : snapshot.schemaVersion;
+  if (version !== 1 && version !== 2 && version !== 3) {
     throw new Error('This project uses an unsupported schema version.');
   }
-  const project = structuredClone(snapshot);
-  project.schemaVersion = 1;
-  return project;
+  return migrateProjectToV3(structuredClone(snapshot));
 }
 
 function localReference(ref) {
@@ -154,6 +155,16 @@ function referenceLocations(project) {
     for (const take of project.vocalTakes) {
       if (!isObject(take) || typeof take.url !== 'string') throw new Error('Invalid vocal take.');
       if (localReference(take.url)) locations.push({ owner: take, key: 'url', ref: take.url });
+    }
+  }
+  if (project.tracks !== undefined) {
+    if (!Array.isArray(project.tracks)) throw new Error('Invalid project: tracks must be an array.');
+    for (const track of project.tracks) {
+      const sampler = track?.patch?.sampler;
+      if (!sampler) continue;
+      if (!isObject(sampler)) throw new Error('Invalid sampler patch.');
+      if (sampler.url !== undefined && sampler.url !== null && typeof sampler.url !== 'string') throw new Error('Invalid sampler audio reference.');
+      if (localReference(sampler.url)) locations.push({ owner: sampler, key: 'url', ref: sampler.url });
     }
   }
   return locations;

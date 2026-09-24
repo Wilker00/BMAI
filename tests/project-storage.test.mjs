@@ -15,7 +15,7 @@ test('legacy blob audio is packaged once and source snapshots stay unchanged',as
     const before=structuredClone(original);
     const packed=await packProjectAssets(original);
     assert.deepEqual(original,before);
-    assert.equal(packed.schemaVersion,1);
+    assert.equal(packed.schemaVersion,3);
     assert.deepEqual(Object.keys(packed.audioAssets),[url]);
     assert.deepEqual(new Uint8Array(Buffer.from(packed.audioAssets[url].base64,'base64')),bytes);
     assert.equal(packed.audioAssets[url].byteLength,bytes.length);
@@ -24,7 +24,10 @@ test('legacy blob audio is packaged once and source snapshots stay unchanged',as
 test('factory audio stays a reference and projects without user media need no database',async()=>{
   const value={vocals:{url:'/sounds/vocal.wav'},customSamples:{}};
   const result=await hydrateProjectAssets(await packProjectAssets(value));
-  assert.deepEqual(result,{...value,schemaVersion:1});
+  assert.equal(result.schemaVersion,3);
+  assert.equal(result.vocals.url,'/sounds/vocal.wav');
+  assert.ok(result.patterns);
+  assert.ok(result.playlist);
 });
 test('damaged or incompatible embedded media is rejected before database writes',async()=>{
   for(const asset of [{base64:'###='},{base64:'YWJj',byteLength:5},{base64:'YQ==',mime:5},{base64:'YR=='}]) {
