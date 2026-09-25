@@ -17,17 +17,16 @@
 .steps{display:grid;grid-template-columns:repeat(16,1fr);gap:4px;align-self:stretch}
 .drum-lanes .steps{height:100%}
 .step{height:34px;border:1px solid #3a3a3a;border-radius:5px;background:#1a1a1a;padding:0;transition:all .14s ease}
-.drum-lanes .step{height:100%;min-height:52px}
+.drum-lanes .step{height:100%;min-height:50px;background:#242424;border:1px solid #333333;border-radius:4px}
+.drum-lanes .step:nth-child(n+5):nth-child(-n+8),.drum-lanes .step:nth-child(n+13):nth-child(-n+16),.drum-lanes .step:nth-child(n+21):nth-child(-n+24),.drum-lanes .step:nth-child(n+29):nth-child(-n+32){background:#181818;border-color:#2a2a2a}
+.drum-lanes .step:nth-child(4n):not(:last-child){margin-right:4px}
+.drum-lanes .step:hover{border-color:#8f8f8f}
 .step.beat{background:#1a1a1a}
 .step.on{background:#f5f5f5;border-color:#f5f5f5;box-shadow:none}
 .step.now{outline:2px solid rgba(183,186,190,.95);outline-offset:-1px;box-shadow:none}
 .step.issue{box-shadow:none}
 .step.on.issue{box-shadow:none}
 .step.now.issue{outline-color:#f5f5f5}
-.chord-bars{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
-.chord-bar{border:1px solid #3a3a3a;border-radius:8px;background:#1a1a1a;padding:12px;text-align:center}
-.chord-bar b{display:block;font-size:14px}
-.chord-bar span{font:9px var(--mono);color:#909090}
 .lyric-list{display:grid;gap:8px}
 .lyric-line{width:100%;border:1px solid #3a3a3a;border-radius:8px;background:#1a1a1a;color:#eeeeee;padding:12px;text-align:left}
 .lyric-line.chosen{border-color:#a3a3a3;background:#1a1a1a}
@@ -68,7 +67,7 @@
 .inspector-sheet{transform:translateY(0);opacity:1;transition:transform .42s cubic-bezier(.22,.7,.24,1),opacity .28s ease}
 .inspector.rolled{overflow:hidden;pointer-events:none}
 .inspector.rolled .inspector-sheet{transform:translateY(-120%);opacity:0}
-.inspector-dock{display:none;align-items:center;gap:8px;height:40px;max-width:180px;margin:0;padding:3px 8px 3px 4px;border:1px solid #3a3a3a;border-radius:8px;background:var(--card-wash,#1a1a1a);color:inherit;text-align:left;box-shadow:none;position:static;opacity:1;pointer-events:auto;transform:none}
+.inspector-dock{display:none;align-items:center;gap:8px;height:40px;max-width:180px;margin:0;padding:3px 8px 3px 4px;border:1px solid #3a3a3a;border-radius:8px;background:#1a1a1a;color:inherit;text-align:left;box-shadow:none;position:static;opacity:1;pointer-events:auto;transform:none}
 .shell.inspector-closed .inspector-dock{display:flex}
 .inspector-dock .preset-art{width:42px;height:32px;margin:0;flex:none;border-radius:5px;overflow:hidden;position:relative}
 .inspector-dock .dock-copy{min-width:0;display:grid}
@@ -150,17 +149,107 @@ html{scrollbar-width:thin;scrollbar-color:#3a3a3a transparent}
 .ruler-key{display:flex;align-items:center;padding:0 10px;border-right:1px solid #3a3a3a}
 .roll-beats{display:grid;grid-template-columns:repeat(4,1fr)}
 .roll-beats span{display:flex;align-items:center;padding-left:8px;border-left:1px solid #3a3a3a}
-.piano-wrap{align-items:start;overflow-x:hidden;overflow-y:auto;min-height:0;isolation:isolate}
-.grid{position:relative;overflow:hidden}
-.keyboard{width:var(--key-col);min-width:var(--key-col);margin:0;background:#1a1a1a;border-right:1px solid #3a3a3a}
-.keyboard .key{display:flex;align-items:center;width:100%;height:var(--roll-row);min-height:var(--roll-row);max-height:var(--roll-row);flex:none;border:0;border-bottom:1px solid #3a3a3a;padding:0 8px 0 10px;position:relative;overflow:hidden;cursor:pointer;text-align:left}
-.keyboard .key span{position:static;top:auto;right:auto;height:auto;display:inline;font:10px var(--mono);color:#f5f5f5;white-space:nowrap;line-height:16px}
-.keyboard .key.white{background:#1a1a1a}
-.keyboard .key.black{background:#0c0c0c;padding-left:14px}
-.keyboard .key.black span{color:#9f9f9f}
-.keyboard .key.in-scale{box-shadow:inset 2px 0 0 #f5f5f5}
-.keyboard .key.in-scale span,.keyboard .key.over span{color:#ffffff}
-.keyboard .key.over,.keyboard .key:hover{filter:brightness(1.2)}
+.piano-wrap{align-items:stretch;overflow-x:hidden;overflow-y:auto;min-height:0;isolation:isolate}
+.grid{position:relative;overflow:hidden;min-width:0}
+.keyboard{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  width:var(--key-col);
+  min-width:var(--key-col);
+  margin:0;
+  padding:0;
+  background:#0e0f12;
+  border-right:1px solid #3a3a3a;
+  overflow:visible;
+  flex-shrink:0;
+  box-sizing:border-box;
+}
+/* One solid row per semitone — normal document flow so the stack can't collapse */
+.keyboard .key{
+  position:relative;
+  left:auto;
+  top:auto;
+  flex:0 0 var(--roll-row);
+  width:100%;
+  height:var(--roll-row);
+  min-height:var(--roll-row);
+  max-height:var(--roll-row);
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  box-sizing:border-box;
+  margin:0;
+  padding:0 6px 0 8px;
+  border:0;
+  border-bottom:1px solid #2a2b30;
+  border-radius:0;
+  cursor:pointer;
+  text-align:left;
+  overflow:hidden;
+  z-index:1;
+  appearance:none;
+  -webkit-appearance:none;
+  transition:filter .12s ease, background .12s ease;
+}
+.keyboard .key span{
+  position:relative;
+  display:inline-block;
+  font:9px var(--mono);
+  font-weight:700;
+  letter-spacing:.03em;
+  white-space:nowrap;
+  line-height:1;
+  pointer-events:none;
+}
+.keyboard .key.white{
+  background:#e8e8e8;
+  box-shadow:inset -1px 0 0 rgba(0,0,0,.18);
+}
+.keyboard .key.white span{color:#111}
+.keyboard .key.black{
+  left:auto;
+  width:100%;
+  height:var(--roll-row);
+  min-height:var(--roll-row);
+  max-height:var(--roll-row);
+  border-radius:0;
+  background:#17181c;
+  border-bottom-color:#0a0a0c;
+  box-shadow:inset 28px 0 0 #0c0d10;
+  padding-left:10px;
+}
+.keyboard .key.black span{
+  display:none;
+  color:#9aa0a8;
+}
+.keyboard .key.octave-c{
+  background:#f3f3f3;
+  box-shadow:inset 3px 0 0 #38bdf8, inset -1px 0 0 rgba(0,0,0,.18);
+}
+.keyboard .key.octave-c span{
+  color:#0b0b0b;
+  font-size:10px;
+}
+.keyboard .key.white.in-scale{
+  background:#f0ebe2;
+  box-shadow:inset 2px 0 0 #d4c4a8, inset -1px 0 0 rgba(0,0,0,.12);
+}
+.keyboard .key.black.in-scale{
+  background:#1c2630;
+  box-shadow:inset 28px 0 0 #101820, inset 2px 0 0 #38bdf8;
+}
+.keyboard .key.over,
+.keyboard .key:hover{filter:brightness(1.14)}
+.keyboard .key.qwerty-hit,
+.keyboard .key.white.qwerty-hit{
+  background:#9ee0ff !important;
+  box-shadow:inset 3px 0 0 #38bdf8 !important;
+}
+.keyboard .key.black.qwerty-hit{
+  background:#2a5a70 !important;
+  box-shadow:inset 3px 0 0 #38bdf8 !important;
+}
 .grid{touch-action:none;cursor:crosshair}
 .grid::before{content:'';position:absolute;left:0;right:0;top:var(--hover,-40px);height:var(--roll-row);background:#f5f5f524;pointer-events:none}
 .piano-section .note{height:14px;border-radius:4px;cursor:grab;touch-action:none;overflow:hidden}
@@ -232,8 +321,6 @@ button.sketch-lane em{font-style:normal;font-size:10px;letter-spacing:.08em;text
 .piano-tools{flex-wrap:nowrap!important;justify-content:flex-end;max-width:none}
 .piano-inst-select{max-width:110px}
 .piano-selected{width:120px}
-.chord-bars{grid-template-columns:repeat(auto-fill,minmax(92px,1fr))}
-.chord-bar b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .inspector .details strong,.inspector .description{overflow-wrap:anywhere}
 .inspector .add-project,.inspector .full-preview,.inspector .text-btn{width:100%;box-sizing:border-box}
 .inst-block{margin:14px 0 6px}
@@ -260,9 +347,6 @@ button.sketch-lane em{font-style:normal;font-size:10px;letter-spacing:.08em;text
 .chord-steps span{display:flex;align-items:center;gap:8px}
 .chord-steps b{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#3a3a3a;color:#f5f5f5}
 .chord-status{padding:10px 12px;border-left:2px solid #f5f5f5;background:#1a1a1a}
-.chord-bar{position:relative;display:grid;gap:3px}
-.chord-bar small{color:#8f8f8f;font-size:9px}
-.chord-bar.current-chord{border-color:#f5f5f5;box-shadow:none}
 @media(max-width:760px){.chord-explainer{grid-template-columns:1fr}}
 .vocal-takes{display:grid;gap:8px;padding:12px 14px;border:1px solid #3a3a3a;border-radius:10px;background:#1a1a1a}
 .vocal-take{display:grid;grid-template-columns:minmax(120px,0.8fr) minmax(160px,1.4fr) 52px;gap:12px;align-items:end;padding:10px;border:1px solid #3a3a3a;border-radius:8px}

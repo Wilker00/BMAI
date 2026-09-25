@@ -23,6 +23,7 @@ Honest scope: browser guided studio with prosumer depth. BMAI is not a native DA
 | MIDI / stem import | Done | MIDI import creates a MIDI track/pattern; stem WAV import creates an aligned audio track. |
 | LUFS + true-peak | Done (approx) | Export reports approximate LUFS/TP; explicitly not certified BS.1770. |
 | Cloud publish / realtime collab | Deferred | Offline Share Pack and publish checklist instead; no fake URLs. |
+| Bundle / runtime optimization | Done (polish) | Production build is chunk-split for a cleaner browser handoff and smaller initial payload. |
 | VST / ASIO | Impossible in-browser | Settings/export copy directs users to FL/Logic/Ableton handoff. |
 | AI SongStarter / stem split / AI vocals | Deferred | Not implemented unless separately requested. |
 

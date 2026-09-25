@@ -23,6 +23,6 @@ Updated: 2026-09-24
 
 ## Current verification
 
-- `npm test` passes 50 tests.
+- `npm test` passes 51 tests.
 - `npm run build` succeeds.
-- Vite still warns the main chunk is over 500 kB; code splitting is a later polish item.
+- Production bundle is split into logical chunks, eliminating the previous large-single-chunk warning for a cleaner demo handoff.

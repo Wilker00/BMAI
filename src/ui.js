@@ -4,7 +4,12 @@ export const guides = {
   home: {
     kicker: 'START',
     title: 'Projects',
-    steps: ['Create or open a project.', 'Set tempo in the transport.', 'Add parts, then export.']
+    steps: ['Create or open a project.', 'Set tempo in the transport.', 'Open Studio for the all-in-one arrange view.', 'Add parts, then export.']
+  },
+  studio: {
+    kicker: 'PRODUCE',
+    title: 'Studio',
+    steps: ['Browser left: kits, instruments, plugins, patterns.', 'Playlist center: arrange clips and sections.', 'Channel rack / mixer / piano dock below.', 'Tools right: focus a track, inserts, vocal guide.']
   },
   melody: {
     kicker: 'ARRANGE',

@@ -37,6 +37,9 @@
   flex-direction: column;
   justify-content: space-between;
   padding: 16px;
+  background: var(--surface-1, #131417);
+  border: 1px solid var(--line, #27272a);
+  border-radius: var(--radius-md, 10px);
   background: #141417;
   border: 1px solid #28282d;
   border-radius: 8px;
@@ -48,6 +51,8 @@
 }
 .template-card:hover {
   transform: translateY(-2px);
+  border-color: var(--line-strong, #3f3f46);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
   border-color: #3e3e46;
   background: #18181c;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
@@ -63,6 +68,10 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   padding: 2px 7px;
+  border-radius: 99px;
+  background: var(--surface-2, #1f2127);
+  color: var(--cyan, #38bdf8);
+  border: 1px solid rgba(56, 189, 248, 0.2);
   border-radius: 4px;
   background: rgba(56, 189, 248, 0.1);
   color: #38bdf8;
@@ -70,17 +79,24 @@
 }
 .template-meta {
   font: 10px var(--mono, monospace);
+  color: var(--muted, #94a3b8);
   color: #888;
 }
 .template-title {
+  margin: 0 0 4px;
+  font-size: 15px;
   margin: 0 0 6px;
   font-size: 14px;
   font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.02em;
   color: #f1f5f9;
   letter-spacing: -0.01em;
 }
 .template-desc {
   font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-muted, #94a3b8);
   line-height: 1.45;
   color: #94a3b8;
   margin: 0 0 14px;
@@ -93,6 +109,10 @@
   gap: 6px;
   width: 100%;
   padding: 8px 12px;
+  background: var(--surface-2, #262830);
+  border: 1px solid var(--line, #383a42);
+  border-radius: var(--radius-sm, 6px);
+  color: #fff;
   background: #1f2128;
   border: 1px solid #333644;
   border-radius: 6px;
@@ -103,6 +123,9 @@
   transition: all 0.12s ease;
 }
 .template-btn:hover {
+  background: var(--cyan, #38bdf8);
+  color: #09090b;
+  border-color: var(--cyan, #38bdf8);
   background: #38bdf8;
   color: #090a0d;
   border-color: #38bdf8;
@@ -110,14 +133,21 @@
 .template-tags {
   display: flex;
   flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
   gap: 5px;
   margin: 0 0 14px;
 }
 .template-tag {
   font: 9px var(--mono, monospace);
+  letter-spacing: 0.06em;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   padding: 2px 7px;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--line, #27272a);
+  color: var(--muted, #94a3b8);
   border-radius: 4px;
   background: #1e2026;
   border: 1px solid #2e313c;
@@ -127,6 +157,8 @@
   margin-top: auto;
 }
 .template-btn.primary {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.45);
   background: rgba(56, 189, 248, 0.12);
   border-color: rgba(56, 189, 248, 0.35);
   color: #38bdf8;
@@ -140,6 +172,9 @@
   gap: 16px;
   padding: 12px 18px;
   margin-bottom: 20px;
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: var(--radius-md, 10px);
   background: #14151b;
   border: 1px solid #282a36;
   border-radius: 8px;
@@ -150,6 +185,7 @@
   gap: 10px;
 }
 .coach-badge {
+  font: 10px var(--mono, monospace);
   font: 9px var(--mono, monospace);
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -197,14 +233,20 @@
 .storage-notice-banner {
   display: flex;
   align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
   gap: 10px;
   padding: 10px 14px;
   margin: 16px 0;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 8px;
   background: rgba(245, 158, 11, 0.05);
   border: 1px solid rgba(245, 158, 11, 0.22);
   border-radius: 6px;
   font-size: 12px;
   color: #fde68a;
+  line-height: 1.4;
   line-height: 1.45;
 }
 .storage-notice-icon {
