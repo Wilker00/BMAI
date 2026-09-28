@@ -317,6 +317,7 @@ export function mergePlaylistPreservingEdits(previous, next) {
       if (!match) return clip;
       return {
         ...clip,
+        id: match.id,
         // Keep intentional placement when the user moved the clip
         startBar: match.startBar,
         lengthBars: match.lengthBars,

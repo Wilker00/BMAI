@@ -615,6 +615,25 @@
 .welcome-steps { margin: 0 0 20px; padding-left: 1.2rem; color: #d4d4d8; }
 .welcome-steps li { margin: 4px 0; }
 .welcome-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.welcome-card .prompt-overrides { margin: 0 0 12px; }
+.welcome-card .welcome-scope-note { color: #a1a1aa; font-size: 12px; line-height: 1.45; margin: 0 0 14px; }
+.welcome-prompt-label { display: block; font-size: 12px; color: #d4d4d8; }
+.sound-preview.is-active { outline: 1px solid #f5f5f5; outline-offset: -1px; }
+.library-player {
+  position: sticky; bottom: 0; z-index: 2;
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  margin-top: 12px; padding: 10px 12px;
+  background: #111; border: 1px solid #3a3a3a; border-radius: 8px;
+}
+.library-player strong { flex: 1; min-width: 120px; font-size: 13px; }
+.instrument-patch, .clip-auto-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.patch-slider { display: grid; gap: 4px; min-width: 120px; font-size: 11px; color: #c4c4c4; }
+.patch-slider input[type="range"] { width: 140px; }
+@media (max-width: 640px) {
+  .welcome-card { padding: 18px 16px; }
+  .welcome-card .prompt-overrides { grid-template-columns: 1fr; }
+  .welcome-actions .page-btn, .welcome-actions .ghost { min-height: 42px; }
+}
 
 .group-bus-row, .ref-cue-row {
   display: flex; flex-wrap: wrap; gap: 12px; align-items: center;

@@ -150,6 +150,7 @@ export function syncWorkingToActivePatterns(state) {
     velocity: state.drumVelocity,
     nudge: state.drumNudge,
     chokeGroups: state.chokeGroups,
+    kit: state.kit || '',
     bars: state.drumPatternBars || findPattern(state.patterns, 'drums', state.activePatternIds.drums)?.bars || 1
   });
   writeWorkingToPattern(state.patterns, 'chords', state.activePatternIds.chords, {
@@ -180,6 +181,7 @@ export function loadActivePatternsIntoWorking(state) {
   state.drumNudge = drm.nudge || {};
   state.chokeGroups = drm.chokeGroups || { openhat: 1, hat: 1 };
   state.drumPatternBars = drm.bars || 1;
+  if (drm.kit) state.kit = drm.kit;
   state.chords = chd.chords;
   if (state.activePatternIds.bass) {
     const bss = readPatternToWorking(state.patterns, 'bass', state.activePatternIds.bass);

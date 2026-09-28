@@ -11,6 +11,7 @@ export function cloneNotes(list) {
   return (list || []).map(note => {
     const next = { n: note.n, x: note.x, w: note.w };
     if (note.v !== undefined) next.v = note.v;
+    if (note.locked) next.locked = true;
     return next;
   });
 }
@@ -110,7 +111,8 @@ function normalizeDrumPattern(raw) {
     rolls: raw?.rolls && typeof raw.rolls === 'object' ? structuredClone(raw.rolls) : {},
     velocity: raw?.velocity && typeof raw.velocity === 'object' ? structuredClone(raw.velocity) : {},
     nudge: raw?.nudge && typeof raw.nudge === 'object' ? structuredClone(raw.nudge) : {},
-    chokeGroups: raw?.chokeGroups && typeof raw.chokeGroups === 'object' ? structuredClone(raw.chokeGroups) : { openhat: 1, hat: 1 }
+    chokeGroups: raw?.chokeGroups && typeof raw.chokeGroups === 'object' ? structuredClone(raw.chokeGroups) : { openhat: 1, hat: 1 },
+    kit: typeof raw?.kit === 'string' ? raw.kit : ''
   };
 }
 
@@ -234,6 +236,7 @@ export function writeWorkingToPattern(patterns, kind, id, working) {
     pattern.velocity = structuredClone(working.velocity || working.drumVelocity || pattern.velocity || {});
     pattern.nudge = structuredClone(working.nudge || working.drumNudge || pattern.nudge || {});
     if (working.chokeGroups) pattern.chokeGroups = structuredClone(working.chokeGroups);
+    if (typeof working.kit === 'string') pattern.kit = working.kit;
     if (working.bars) pattern.bars = clampBars(working.bars);
   } else if (kind === 'chords') {
     pattern.progression = {
@@ -264,6 +267,7 @@ export function readPatternToWorking(patterns, kind, id) {
       nudge: structuredClone(pattern.nudge || {}),
       chokeGroups: structuredClone(pattern.chokeGroups || { openhat: 1, hat: 1 }),
       bars: pattern.bars,
+      kit: pattern.kit || '',
       name: pattern.name,
       id: pattern.id
     };

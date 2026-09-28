@@ -29,14 +29,14 @@
 .mixer-page .strip-switches, .mixer-page .strip-fx-count { grid-column: 1 / -1; }
 .mixer-page .strip-fx-count { font: 9px var(--mono); color: #939393; }
 .mixer-page .strip-mute { width: 30px; height: 24px; }
-.mixer-page .strip-mute.on { background: #f5f5f5; border-color: #f5f5f5; color: #1a1a1a; }
+.mixer-page .strip-mute.on { background: var(--action); border-color: transparent; color: var(--action-ink); }
 .mixer-page .mastering-row { margin: 0 0 8px; gap: 6px; }
 .mixer-page .master-btn { gap: 6px; padding: 8px; border-radius: 4px; min-width: 0; min-height: 48px; }
 .mixer-page .master-btn-text strong { font-size: 9px; }
 .mixer-page .master-btn-text small { font-size: 9px; color: #a3a3a3; }
 .mixer-page .master-btn.on { border-color: #656565; }
 .mixer-page .master-led { width: 5px; height: 5px; }
-.mixer-page .master-btn.on .master-led { background: #f5f5f5; }
+.mixer-page .master-btn.on .master-led { background: var(--action); }
 .mixer-page .master-meter-card { grid-column: 1 / -1; padding: 6px 0; }
 .mixer-page .meter-label { display: block; margin-bottom: 6px; font: 9px var(--mono); color: #aaa; }
 .mixer-page .fx-rack-card { border: 0; border-top: 1px solid #333; border-radius: 0; padding: 8px 0; margin: 0; background: transparent; box-shadow: none; }

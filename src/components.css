@@ -2,21 +2,21 @@
 body,button,input,select,textarea{font-family:var(--font)}
 h1,h2,.library-head h2,.workspace-card h2{letter-spacing:0;font-weight:600}
 .header-tools{display:flex;align-items:center;gap:8px}
-.help-btn,.tour-dismiss{border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--surface-3);color:var(--text);min-height:28px;padding:0 10px;font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
-.help-btn:hover,.tour-dismiss:hover{background:var(--steel);color:var(--ink)}
+.help-btn,.tour-dismiss{border:0;border-radius:var(--radius-sm);background:transparent;color:var(--muted);min-height:32px;padding:0 10px;font:600 13px var(--font);letter-spacing:0;text-transform:none;white-space:nowrap}
+.help-btn:hover,.tour-dismiss:hover{background:var(--surface-3);color:var(--text)}
 .mini-guide,.studio-tour{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface-1);max-width:760px}
 .mini-guide ol,.studio-tour ol{display:flex;flex-wrap:wrap;gap:4px 16px;margin:4px 0 0;padding-left:16px;color:var(--muted);font-size:11px}
-.tour-kicker{margin:0;color:var(--muted);font:9px var(--mono);letter-spacing:.14em}
+.tour-kicker{margin:0;color:var(--muted);font:600 12px var(--font);letter-spacing:0}
 .help-disclosure,.new-project-disclosure{border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface-1);color:var(--muted)}
-.help-disclosure summary,.new-project-disclosure>summary{cursor:pointer;list-style:none;padding:8px 12px;font:10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text)}
+.help-disclosure summary,.new-project-disclosure>summary{cursor:pointer;list-style:none;padding:10px 12px;font:600 14px var(--font);letter-spacing:0;text-transform:none;color:var(--text)}
 .help-disclosure summary::-webkit-details-marker,.new-project-disclosure>summary::-webkit-details-marker{display:none}
 .help-disclosure summary::after,.new-project-disclosure>summary::after{content:'+';float:right;color:var(--muted)}
 .help-disclosure[open] summary,.new-project-disclosure[open]>summary{border-bottom:1px solid var(--line)}
 .help-disclosure[open] summary::after,.new-project-disclosure[open]>summary::after{content:'−'}
 .disclosure-body,.help-disclosure>p{margin:0;padding:8px 12px 10px;color:var(--muted);font-size:11px;line-height:1.45}
 .new-project-disclosure .take-box{border:0;background:transparent;box-shadow:none}
-.action-bar{min-height:44px;align-items:center;padding:6px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface-1)}
-.action-bar-label{padding:0 6px;color:var(--muted);font:9px var(--mono);letter-spacing:.12em;text-transform:uppercase}
+.action-bar{min-height:44px;align-items:center;padding:6px;border:0;border-radius:var(--radius-md);background:var(--panel)}
+.action-bar-label{padding:0 6px;color:var(--muted);font:600 12px var(--font);letter-spacing:0;text-transform:none}
 .action-bar .action-primary{margin-left:auto}
 .page-btn,.take-actions button,.export-actions button{min-height:var(--control-h);cursor:pointer}
 .page-btn:hover,.take-actions button:hover,.choice-card:hover,.idea:hover,.vocal-card:hover,.lyric-line:hover,.sound-preview:hover,.click-card:hover{border-color:var(--line-strong)}
@@ -25,7 +25,7 @@ button.idea,button.choice-card,button.vocal-card,button.lyric-line,button.click-
 .idea,.choice-card,.vocal-card,.lyric-line,.sound-preview,.click-card,.section-tile,.sec-tag{cursor:pointer}
 .idea:focus-visible,.choice-card:focus-visible,.vocal-card:focus-visible,.click-card:focus-visible,.page-btn:focus-visible,button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.section-tile:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .idea.chosen,.choice-card.chosen,.vocal-card.chosen,.lyric-line.chosen,.click-card.chosen{box-shadow:inset 0 0 0 1px var(--line-strong)}
-.bmai-tip{position:fixed;z-index:80;max-width:240px;padding:6px 8px;border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--ink);color:var(--text);font:11px/1.35 var(--font);pointer-events:none;box-shadow:0 8px 20px rgba(0,0,0,.35)}
+.bmai-tip{position:fixed;z-index:80;max-width:240px;padding:6px 8px;border:0;border-radius:var(--radius-sm);background:var(--panel2);color:var(--text);font:12px/1.35 var(--font);pointer-events:none;box-shadow:0 8px 20px rgba(0,0,0,.35)}
 .bmai-tip[hidden]{display:none}
 .orb{width:64px;height:64px;right:18px;top:22px;background:transparent;border:1px solid #3a3a3a;filter:none}
 .preset-art{background:#121212}
@@ -43,7 +43,7 @@ svg.ico.solid,svg.ico.solid *{fill:currentColor;stroke:none}
 .round svg.ico{width:13px;height:13px}
 .preview-icon{width:12px;height:12px}
 .step{background:#2e2e2e;border-color:#4e4e4e}
-.step.on{background:#f3f3f3;border-color:#f3f3f3;color:#121212}
+.step.on{background:color-mix(in srgb, var(--action) 28%, var(--panel));border-color:transparent;color:var(--text);box-shadow:inset 0 0 0 1px var(--action)}
 .idea,.choice-card,.vocal-card,.export-card,.take-box,.section-tile,.fx-rack-card{background:#222222;border-color:#454545}
 .drum-lanes .drum-lane{background:#141414;border-color:#454545}
 .project-dot{display:none}

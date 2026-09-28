@@ -2,47 +2,47 @@ const GUIDE_KEY = page => `bmai-guide-${page}`;
 
 export const guides = {
   home: {
-    kicker: 'START',
+    kicker: 'Start',
     title: 'Projects',
     steps: ['Create or open a project.', 'Set tempo in the transport.', 'Open Studio for the all-in-one arrange view.', 'Add parts, then export.']
   },
   studio: {
-    kicker: 'PRODUCE',
+    kicker: 'Produce',
     title: 'Studio',
-    steps: ['Browser left: kits, instruments, plugins, patterns.', 'Playlist center: arrange clips and sections.', 'Channel rack / mixer / piano dock below.', 'Tools right: focus a track, inserts, vocal guide.']
+    steps: ['Song is the arrangement. Beat opens the step editor under the timeline.', 'Create a beat, draw it on the drums lane, then double-click the clip to edit steps.', 'Browser picks patterns and sounds. Inspector shows the selected clip or track.', 'Add track, section, marker, or audio from the Add menu.']
   },
   melody: {
-    kicker: 'ARRANGE',
+    kicker: 'Arrange',
     title: 'Arrangement',
-    steps: ['Generate or pick a one-bar phrase.', 'Edit it in the piano roll.', 'Use in project, then add the other lanes.', 'Song sections unlock after two parts.']
+    steps: ['New phrases follow key, style, and the chord track. This is not an AI prompt.', 'Lock selected notes, then rewrite the rest.', 'Edit the piano roll, then use it in the project.', 'Song sections unlock after two parts.']
   },
   drums: {
-    kicker: 'DRUMS',
+    kicker: 'Drums',
     title: 'Drums',
-    steps: ['Click a step to place a hit. Shift-click for rolls.', 'Add sample loads WAV, MP3, OGG, or FLAC.', 'Fix repairs the pocket. Use in project commits it.']
+    steps: ['Click a step to place a hit. Shift-click for rolls.', 'Lock a lane to keep it when the beat is rewritten.', 'Add sample loads WAV, MP3, OGG, or FLAC.', 'Fix repairs the pocket. Use in project commits it.']
   },
   chords: {
-    kicker: 'CHORDS',
+    kicker: 'Chords',
     title: 'Chords',
     steps: ['Pick a progression to preview it.', 'Regenerate for another option in this key.', 'Use in project to include it in playback and export.']
   },
   vocals: {
-    kicker: 'VOCALS',
+    kicker: 'Vocals',
     title: 'Vocals',
-    steps: ['Audition a built-in hook or import a vocal.', 'Record uses the count-in in Recording.', 'Use in project to print it in the mix.']
+    steps: ['Audition a built-in hook or import a vocal.', 'One take plays at a time. Comping is not available yet.', 'Pitch correction is not applied here. Record uses the count-in, then Use in project.']
   },
   mix: {
-    kicker: 'MIX',
+    kicker: 'Mix',
     title: 'Mix',
-    steps: ['Limiter and sidechain sit on the master.', 'EQ, filter, reverb, and delay are session-wide.', 'Mute and faders only affect parts in the project.']
+    steps: ['Track EQ bands, compression, saturation, chorus, filter, and utility are audible live and in the WAV.', 'SEND is reverb. DLY is the delay send. Kick sidechain is the audible duck.', 'Clip warp set to beats or tones follows the project tempo. Pitch correction and extra sidechain routes are handoff notes.']
   },
   export: {
-    kicker: 'EXPORT',
+    kicker: 'Export',
     title: 'Export',
-    steps: ['Master WAV is the stereo mix. Stems are separate files.', 'MIDI is notes only.', 'Download project keeps samples for another browser.']
+    steps: ['Share Pack includes the master, aligned stems, and a DAW open guide.', 'MIDI is notes only.', 'Download project keeps samples for another browser.']
   },
   settings: {
-    kicker: 'SESSION',
+    kicker: 'Session',
     title: 'Settings',
     steps: ['Project name and key are stored with every save.', 'Swing and drum punch apply globally to all parts.', 'Danger zone lets you reset or start a completely new idea.']
   }
@@ -79,6 +79,11 @@ export function btn(label, { id = '', hot = false, tip = '', attrs = '', type = 
 
 export function disclosure(summary, body, { open = false, className = 'help-disclosure' } = {}) {
   return `<details class="${className}"${open ? ' open' : ''}><summary>${summary}</summary><div class="disclosure-body">${body}</div></details>`;
+}
+
+export function menuPop(summaryHtml, itemsHtml, { className = 'studio-menu', summaryClass = 'studio-tool-btn', label = '' } = {}) {
+  const named = label ? ` aria-label="${label.replace(/"/g, '&quot;')}"` : '';
+  return `<details class="${className}"><summary class="${summaryClass}"${named}>${summaryHtml}</summary><div class="studio-menu-pop">${itemsHtml}</div></details>`;
 }
 
 export function clickCard(className, attrs, body) {

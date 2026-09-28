@@ -388,15 +388,28 @@ export function generateDemoBlurb(project = {}) {
  * @param {Object} project
  * @returns {string}
  */
-export function generateSharePackReadme(project = {}) {
+export function sharePackStemName(projectName, trackId) {
+  const safe = String(projectName || 'project').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'project';
+  const id = String(trackId || 'track').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'track';
+  return `stems/${safe}-${id}.wav`;
+}
+
+export function generateSharePackReadme(project = {}, { stemNames = [] } = {}) {
   const name = project.name || 'BMAI Project';
   const bpm = project.bpm || 92;
   const key = project.key || 'A minor';
   const meter = project.meter || '4/4';
   const date = new Date().toISOString().slice(0, 10);
+  const safe = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const sections = Array.isArray(project.sections) && project.sections.length
     ? project.sections.map((s, i) => `  ${i + 1}. ${s.name} — ${s.bars} bars (active: ${Object.entries(s.active || {}).filter(([, v]) => v).map(([k]) => k).join(', ')})`).join('\n')
     : '  1. Loop — 4 bars';
+  const markers = Array.isArray(project.proSession?.markers) && project.proSession.markers.length
+    ? project.proSession.markers.map(marker => `  bar ${Math.floor(Number(marker.bar) || 0) + 1}: ${marker.name || 'Marker'}`).join('\n')
+    : '  (none)';
+  const stemList = stemNames.length
+    ? stemNames.map(file => `   ${file}`).join('\n')
+    : '   (no separate stems in this pack)';
 
   return `======================================================================
 BMAI Guided Studio — Audio & Project Share Pack
@@ -410,27 +423,47 @@ Engine:          BMAI Schema v3 / Offline Web Audio
 
 FILES INCLUDED IN THIS ARCHIVE:
 ----------------------------------------------------------------------
-1. ${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-master.wav
+1. ${safe}-master.wav
    Stereo 16-bit 44.1 kHz WAV master mixdown.
-   Ready for playback, streaming, or video sync.
+   Insert EQ, filter, compression, saturation, chorus, and utility
+   are printed into this file and into the stems.
 
-2. ${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json
-   Complete portable BMAI project file including all tracks,
-   patterns, notes, drum velocities, automation, and mix parameters.
+2. ${safe}.json
+   Portable BMAI project: tracks, patterns, notes, automation, mix.
 
-3. README.txt
+3. metadata.json
+   Tempo, key, meter, section lengths, and markers.
+
+4. stems/
+${stemList}
+   Each stem is the same bar range and start point as the master.
+
+5. README.txt
    This session documentation.
 
 SONG ARRANGEMENT STRUCTURE:
 ----------------------------------------------------------------------
 ${sections}
 
-HOW TO REOPEN OR COLLABORATE IN BMAI:
+MARKERS:
+----------------------------------------------------------------------
+${markers}
+
+HOW TO REOPEN IN BMAI:
 ----------------------------------------------------------------------
 1. Open BMAI in any modern browser (Chrome, Edge, Safari, Firefox).
 2. Go to Studio Home > Saved Projects > Import (.json).
-3. Select the included "${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json" file.
-4. Your complete project, tracks, and patterns will instantly load!
+3. Select "${safe}.json".
+
+OPEN IN ABLETON, FL STUDIO, OR LOGIC:
+----------------------------------------------------------------------
+1. Create a session at ${bpm} BPM, ${meter}, in ${key}.
+2. Import every file in stems/ onto its own audio track.
+3. Place every stem at bar 1 so they stay aligned with the master.
+4. Markers above are 1-based bar positions from metadata.json.
+5. Stems already follow the project tempo when a clip warp is beats or tones.
+   Pitch correction and custom sidechain routes in the JSON are handoff
+   notes only. The kick-duck sidechain is already in the audio.
 ======================================================================
 `;
 }
