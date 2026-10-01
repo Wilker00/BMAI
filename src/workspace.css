@@ -738,28 +738,27 @@
   gap: 8px;
 }
 .mode-pill {
-  border: 1px solid #3a3a3a;
-  background: #1a1a1a;
-  color: #f5f5f5;
-  border-radius: 99px;
-  padding: 5px 12px;
-  font: 9px var(--mono);
-  letter-spacing: .08em;
+  border: 0;
+  background: #2c2c2c;
+  color: #f4f4f4;
+  border-radius: 8px;
+  height: 32px;
+  padding: 0 12px;
+  font: 600 14px/1 var(--font, sans-serif);
+  letter-spacing: 0;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  transition: all .16s;
 }
 .mode-pill:hover {
-  border-color: #a3a3a3;
-  color: #ffffff;
+  background: #3a3a3a;
+  color: #f5f5f5;
 }
 .mode-pill.on {
-  border-color: #a3a3a3;
   background: #3a3a3a;
-  color: #ebebeb;
-  box-shadow:none;
+  color: #f5f5f5;
+  box-shadow: inset 2px 0 0 #f5f5f5;
 }
 .mode-dot {
   width: 6px;
@@ -1050,15 +1049,14 @@
 
 /* Tap Tempo Button */
 .tap-tempo-btn {
-  border: 1px solid #3a3a3a;
-  border-radius: 5px;
-  background: #1a1a1a;
-  color: #f5f5f5;
-  font: 9px var(--mono);
-  font-weight: 700;
-  padding: 4px 8px;
+  border: 0;
+  border-radius: 8px;
+  height: 32px;
+  background: #2c2c2c;
+  color: #f4f4f4;
+  font: 600 14px/1 var(--font, sans-serif);
+  padding: 0 12px;
   cursor: pointer;
-  transition: all 0.12s ease;
   user-select: none;
 }
 .tap-tempo-btn:hover {

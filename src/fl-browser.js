@@ -20,16 +20,16 @@ export function renderFlBrowser(state = {}) {
     <div class="fl-browser-tree" role="tree">
       ${packs.map(pack => `
         <div class="fl-browser-category" data-browser-pack="${pack.id}">
-          <div class="fl-browser-cat-header" tabindex="0" role="treeitem" aria-expanded="true">
+          <button type="button" class="fl-browser-cat-header" role="treeitem" aria-expanded="true">
             <span class="fl-browser-cat-badge">DIR</span>
             <strong class="fl-browser-cat-title">${pack.label}</strong>
-          </div>
+          </button>
           <div class="fl-browser-items-list" role="group">
             ${pack.items.map(item => `
-              <div class="fl-browser-item" tabindex="0" role="treeitem" data-browser-sample="${item}" title="Click to preview ${item}">
+              <button type="button" class="fl-browser-item" role="treeitem" data-browser-sample="${item}" title="Click to preview ${item}">
                 <span class="fl-browser-item-type">${item.includes('Synth') || item.includes('Piano') ? 'GEN' : item.includes('Beat') || item.includes('EQ') || item.includes('Limiter') || item.includes('Reverb') ? 'FX' : 'SMP'}</span>
                 <span class="fl-browser-item-name">${item}</span>
-              </div>
+              </button>
             `).join('')}
           </div>
         </div>

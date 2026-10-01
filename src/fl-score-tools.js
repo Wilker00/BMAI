@@ -255,6 +255,55 @@ export function renderFlScoreModal(tool = 'strum', params = {}) {
         <span class="fl-score-val">${Math.round(decay * 100)}%</span>
       </div>
     `;
+  } else if (tool === 'flip') {
+    title = 'FL Flip (Alt+Y)';
+    const dir = params.direction || 'horizontal';
+    bodyHtml = `
+      <div class="fl-score-row">
+        <label>FLIP DIRECTION</label>
+        <div class="fl-score-toggle-group">
+          <button type="button" class="fl-score-toggle-btn ${dir === 'horizontal' ? 'active' : ''}" data-score-opt="direction:horizontal">HORIZONTAL (TIME)</button>
+          <button type="button" class="fl-score-toggle-btn ${dir === 'vertical' ? 'active' : ''}" data-score-opt="direction:vertical">VERTICAL (PITCH)</button>
+        </div>
+      </div>
+    `;
+  } else if (tool === 'lfo') {
+    title = 'FL LFO Articulator';
+    const target = params.target || 'velocity';
+    const shape = params.shape || 'sine';
+    const depth = params.depth ?? 0.3;
+    bodyHtml = `
+      <div class="fl-score-row">
+        <label>TARGET PARAMETER</label>
+        <div class="fl-score-toggle-group">
+          <button type="button" class="fl-score-toggle-btn ${target === 'velocity' ? 'active' : ''}" data-score-opt="target:velocity">VELOCITY</button>
+          <button type="button" class="fl-score-toggle-btn ${target === 'pitch' ? 'active' : ''}" data-score-opt="target:pitch">PITCH</button>
+        </div>
+      </div>
+      <div class="fl-score-row">
+        <label>WAVE SHAPE</label>
+        <div class="fl-score-toggle-group">
+          <button type="button" class="fl-score-toggle-btn ${shape === 'sine' ? 'active' : ''}" data-score-opt="shape:sine">SINE</button>
+          <button type="button" class="fl-score-toggle-btn ${shape === 'triangle' ? 'active' : ''}" data-score-opt="shape:triangle">TRIANGLE</button>
+          <button type="button" class="fl-score-toggle-btn ${shape === 'square' ? 'active' : ''}" data-score-opt="shape:square">SQUARE</button>
+        </div>
+      </div>
+      <div class="fl-score-row">
+        <label>LFO DEPTH</label>
+        <input type="range" min="0.05" max="0.8" step="0.05" value="${depth}" data-score-param="depth" class="fl-score-slider" />
+        <span class="fl-score-val">${Math.round(depth * 100)}%</span>
+      </div>
+    `;
+  } else if (tool === 'claw') {
+    title = 'FL Claw Machine (Alt+W)';
+    const gate = params.gate ?? 0.75;
+    bodyHtml = `
+      <div class="fl-score-row">
+        <label>STEP GATE</label>
+        <input type="range" min="0.1" max="1.0" step="0.05" value="${gate}" data-score-param="gate" class="fl-score-slider" />
+        <span class="fl-score-val">${Math.round(gate * 100)}%</span>
+      </div>
+    `;
   }
 
   return `
@@ -275,3 +324,116 @@ export function renderFlScoreModal(tool = 'strum', params = {}) {
     </div>
   `;
 }
+
+// Flip Notes Horizontally (Time Inversion) or Vertically (Pitch Inversion)
+export function flFlipNotes(notes = [], { direction = 'horizontal', anchorPitch = null } = {}) {
+  if (!Array.isArray(notes) || notes.length === 0) return [];
+
+  if (direction === 'horizontal') {
+    const minX = Math.min(...notes.map(n => n.x ?? 0));
+    const maxX = Math.max(...notes.map(n => (n.x ?? 0) + (n.w ?? 1)));
+    return notes.map(n => {
+      const origX = n.x ?? 0;
+      const origW = n.w ?? 1;
+      const newX = minX + (maxX - (origX + origW));
+      return {
+        ...n,
+        x: Math.round(newX * 1000) / 1000
+      };
+    });
+  }
+
+  // Vertical Pitch Inversion
+  const midis = notes.map(n => parsePitchToMidi(n.n));
+  const pivotMidi = anchorPitch ? parsePitchToMidi(anchorPitch) : Math.round((Math.min(...midis) + Math.max(...midis)) / 2);
+
+  return notes.map(n => {
+    const origMidi = parsePitchToMidi(n.n);
+    const invertedMidi = pivotMidi - (origMidi - pivotMidi);
+    return {
+      ...n,
+      n: midiToPitch(invertedMidi)
+    };
+  });
+}
+
+// LFO Modulation Tool across notes
+export function flLfoNotes(notes = [], { target = 'velocity', shape = 'sine', frequency = 1.0, depth = 0.3 } = {}) {
+  if (!Array.isArray(notes) || notes.length === 0) return [];
+  const minX = Math.min(...notes.map(n => n.x ?? 0));
+  const span = Math.max(1, Math.max(...notes.map(n => (n.x ?? 0) + (n.w ?? 1))) - minX);
+
+  return notes.map(n => {
+    const progress = ((n.x ?? 0) - minX) / span;
+    const phase = progress * frequency * 2 * Math.PI;
+    let lfoVal = 0;
+
+    if (shape === 'triangle') {
+      lfoVal = 2 * Math.abs(2 * ((progress * frequency) % 1) - 1) - 1;
+    } else if (shape === 'square') {
+      lfoVal = Math.sin(phase) >= 0 ? 1 : -1;
+    } else {
+      lfoVal = Math.sin(phase); // default sine
+    }
+
+    if (target === 'pitch') {
+      const origMidi = parsePitchToMidi(n.n);
+      const shiftSemis = Math.round(lfoVal * depth * 12);
+      return {
+        ...n,
+        n: midiToPitch(origMidi + shiftSemis)
+      };
+    }
+
+    // Velocity target
+    const origV = n.v ?? 0.8;
+    const newV = Math.max(0.1, Math.min(1.0, origV + lfoVal * depth));
+    return {
+      ...n,
+      v: Math.round(newV * 100) / 100
+    };
+  });
+}
+
+// Claw Machine Tool: Slice long chords into rhythmic groove steps
+export function flClawNotes(notes = [], { stepLength = 1.0, gate = 0.75 } = {}) {
+  if (!Array.isArray(notes)) return [];
+  const result = [];
+
+  for (const note of notes) {
+    const origW = note.w ?? 1;
+    const origX = note.x ?? 0;
+    const count = Math.max(1, Math.floor(origW / stepLength));
+
+    for (let i = 0; i < count; i++) {
+      result.push({
+        ...note,
+        id: `${note.id || 'claw'}-${i}-${Math.random().toString(36).slice(2, 5)}`,
+        x: Math.round((origX + i * stepLength) * 1000) / 1000,
+        w: Math.round(stepLength * gate * 1000) / 1000
+      });
+    }
+  }
+  return result;
+}
+
+// 16 Authentic FL Studio MIDI Channel Color Groups
+export const FL_MIDI_COLOR_GROUPS = [
+  { channel: 1, name: 'Main (Green)', color: '#54c571' },
+  { channel: 2, name: 'Voicing 2 (Blue)', color: '#38bdf8' },
+  { channel: 3, name: 'Voicing 3 (Orange)', color: '#fb923c' },
+  { channel: 4, name: 'Voicing 4 (Purple)', color: '#c084fc' },
+  { channel: 5, name: 'Voicing 5 (Yellow)', color: '#facc15' },
+  { channel: 6, name: 'Voicing 6 (Red)', color: '#f43f5e' },
+  { channel: 7, name: 'Voicing 7 (Teal)', color: '#2dd4bf' },
+  { channel: 8, name: 'Voicing 8 (Pink)', color: '#f472b6' },
+  { channel: 9, name: 'Voicing 9 (Indigo)', color: '#818cf8' },
+  { channel: 10, name: 'Drums / Perc (Gold)', color: '#eab308' },
+  { channel: 11, name: 'Voicing 11 (Emerald)', color: '#34d399' },
+  { channel: 12, name: 'Voicing 12 (Cyan)', color: '#22d3ee' },
+  { channel: 13, name: 'Voicing 13 (Rose)', color: '#fb7185' },
+  { channel: 14, name: 'Voicing 14 (Lime)', color: '#a3e635' },
+  { channel: 15, name: 'Voicing 15 (Amber)', color: '#f59e0b' },
+  { channel: 16, name: 'Voicing 16 (Violet)', color: '#a855f7' }
+];
+

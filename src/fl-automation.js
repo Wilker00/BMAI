@@ -111,3 +111,90 @@ export function renderAutomationClipSvg(clip, width = 280, height = 70) {
     </div>
   </div>`;
 }
+
+// Insert a new automation point at fractional position x with value y
+export function insertAutomationPoint(clip, x, y, tension = 0) {
+  if (!clip || !clip.points) return clip;
+  const clampX = Math.max(0, Math.min(1, x));
+  const clampY = Math.max(0, Math.min(1, y));
+  const clampT = Math.max(-1, Math.min(1, tension));
+  clip.points.push({ x: clampX, y: clampY, tension: clampT });
+  clip.points.sort((a, b) => a.x - b.x);
+  return clip;
+}
+
+// Remove an automation point by index (keeps at least 2 endpoints)
+export function removeAutomationPoint(clip, pointIndex) {
+  if (!clip || !clip.points || clip.points.length <= 2) return clip;
+  if (pointIndex < 0 || pointIndex >= clip.points.length) return clip;
+  clip.points.splice(pointIndex, 1);
+  return clip;
+}
+
+// Update tension value on a specific point
+export function setAutomationTension(clip, pointIndex, tension) {
+  if (!clip || !clip.points || !clip.points[pointIndex]) return clip;
+  clip.points[pointIndex].tension = Math.max(-1, Math.min(1, tension));
+  return clip;
+}
+
+// Audio Clip Crossfade Calculator
+// When two audio clips overlap on the same playlist track, compute gain envelopes
+// for smooth de-click crossfading.
+export function computeClipCrossfade(clipA, clipB, crossfadeLength = 0.25) {
+  if (!clipA || !clipB) return { clipAFade: null, clipBFade: null };
+
+  const aStart = clipA.startBar ?? 0;
+  const aEnd = aStart + (clipA.lengthBars ?? 1);
+  const bStart = clipB.startBar ?? 0;
+  const bEnd = bStart + (clipB.lengthBars ?? 1);
+
+  // Check for overlap
+  const overlapStart = Math.max(aStart, bStart);
+  const overlapEnd = Math.min(aEnd, bEnd);
+
+  if (overlapStart >= overlapEnd) {
+    return { clipAFade: null, clipBFade: null, overlapBars: 0 };
+  }
+
+  const overlapBars = overlapEnd - overlapStart;
+  const fadeBars = Math.min(crossfadeLength, overlapBars);
+
+  // Clip A fades out over the overlap region
+  const clipAFade = {
+    clipId: clipA.id,
+    fadeOutStart: overlapStart,
+    fadeOutEnd: overlapStart + fadeBars,
+    type: 'fadeOut'
+  };
+
+  // Clip B fades in over the overlap region
+  const clipBFade = {
+    clipId: clipB.id,
+    fadeInStart: overlapStart,
+    fadeInEnd: overlapStart + fadeBars,
+    type: 'fadeIn'
+  };
+
+  return { clipAFade, clipBFade, overlapBars };
+}
+
+// Evaluate crossfade gain at a given bar position
+export function crossfadeGainAt(bar, fade) {
+  if (!fade) return 1.0;
+  if (fade.type === 'fadeOut') {
+    if (bar <= fade.fadeOutStart) return 1.0;
+    if (bar >= fade.fadeOutEnd) return 0.0;
+    const t = (bar - fade.fadeOutStart) / (fade.fadeOutEnd - fade.fadeOutStart);
+    // Equal-power crossfade curve
+    return Math.cos(t * Math.PI * 0.5);
+  }
+  if (fade.type === 'fadeIn') {
+    if (bar <= fade.fadeInStart) return 0.0;
+    if (bar >= fade.fadeInEnd) return 1.0;
+    const t = (bar - fade.fadeInStart) / (fade.fadeInEnd - fade.fadeInStart);
+    return Math.sin(t * Math.PI * 0.5);
+  }
+  return 1.0;
+}
+

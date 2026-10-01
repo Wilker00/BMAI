@@ -28,10 +28,10 @@ export function renderTimelineMarkers(markers = [], totalBars = 32) {
     const leftPct = Math.max(0, Math.min(100, ((m.bar - 1) / safeTotal) * 100)).toFixed(2);
     const color = m.color || '#38bdf8';
     return `
-      <div class="fl-timeline-marker-flag" data-marker-id="${m.id}" data-marker-bar="${m.bar}" style="left: ${leftPct}%; border-color: ${color};" title="${m.name} (Bar ${m.bar}) - Click to jump, F2 to rename">
+      <button type="button" class="fl-timeline-marker-flag" data-marker-id="${m.id}" data-marker-bar="${m.bar}" style="left: ${leftPct}%; border-color: ${color};" title="${m.name} (Bar ${m.bar}) - Click to jump">
         <span class="fl-marker-stem" style="background-color: ${color};"></span>
         <span class="fl-marker-label" style="background-color: ${color};">${m.name}</span>
-      </div>
+      </button>
     `;
   }).join('');
 }

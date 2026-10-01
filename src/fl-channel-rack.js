@@ -235,8 +235,8 @@ export function renderFlChannelRack(state, {
           ${Array.from({ length: totalSteps }, (_, step) => {
             const laneSteps = state.drums?.[activeLane] || new Set();
             const isOn = laneSteps.has(step);
-            const vel = state.drumVelocities?.[activeLane]?.[step] ?? 80;
-            const height = isOn ? vel : 0;
+            const vel = state.drumVelocity?.[activeLane]?.[step] ?? 0.8;
+            const height = isOn ? Math.round(Math.min(1.3, vel) / 1.3 * 100) : 0;
             return `<div class="fl-graph-col" data-step="${step}" data-lane="${activeLane}">
               <div class="fl-graph-bar ${isOn ? 'active' : ''}" style="height: ${height}%"></div>
             </div>`;

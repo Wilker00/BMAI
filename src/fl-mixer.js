@@ -13,7 +13,7 @@ export function renderFlMixer(state, focusTrackId = 'master') {
   return `<div class="fl-mixer-console" id="fl-mixer-console" role="region" aria-label="FL Studio Mixer">
     <!-- Left Mixer Section: Channel Strips -->
     <div class="fl-mixer-strips-viewport">
-      <div class="fl-mixer-strips-container">
+      <div class="fl-mixer-strips-container fl-mixer-inserts-rack">
         <!-- Master Track (Track 0) -->
         ${renderChannelStrip(state, masterTrack, 0, focusTrackId === 'master', focusTrackId)}
 
@@ -33,13 +33,13 @@ export function renderFlMixer(state, focusTrackId = 'master') {
       </div>
 
       <!-- Mini Parametric EQ 2 Preview Graph -->
-      <div class="fl-mini-peq-box" data-fl-hint="Fruity Parametric EQ 2 frequency curve">
+      <button type="button" class="fl-mini-peq-box" id="fl-open-peq2-btn" data-fl-open-peq2 data-track-id="${activeTrack.id}" data-fl-hint="Click to open full 7-band Fruity Parametric EQ 2 interface">
         <svg class="fl-mini-peq-svg" viewBox="0 0 200 60" preserveAspectRatio="none">
           <line x1="0" y1="30" x2="200" y2="30" stroke="#252d35" stroke-width="1" />
           <path d="M 0 30 Q 50 15 100 30 T 200 20" fill="none" stroke="#ff851b" stroke-width="2" />
         </svg>
-        <span class="fl-mini-peq-label">EQ 2 MONITOR</span>
-      </div>
+        <span class="fl-mini-peq-label">OPEN 7-BAND EQ 2</span>
+      </button>
 
       <!-- 10 Dedicated FX Slots -->
       <div class="fl-fx-slots-rack">
@@ -49,15 +49,23 @@ export function renderFlMixer(state, focusTrackId = 'master') {
           const def = isOccupied ? findPluginDef(activeFx.pluginId || activeFx.type) : null;
           const isBypassed = !!activeFx?.bypass;
 
-          return `<div class="fl-fx-slot-row ${isOccupied ? 'occupied' : 'empty'}" data-slot-index="${slotIndex}" data-track-id="${activeTrack.id}">
+          return `<div class="fl-fx-slot-row ${isOccupied ? 'occupied has-plugin' : 'empty'} ${isBypassed ? 'is-bypassed' : ''}" data-slot-index="${slotIndex}" data-track-id="${activeTrack.id}">
             <!-- Slot Enable / Bypass Switch -->
-            <button type="button" class="fl-slot-led ${isOccupied && !isBypassed ? 'active' : ''}" data-fl-fx-toggle="${slotIndex}" data-track-id="${activeTrack.id}" data-fl-hint="${isOccupied ? (isBypassed ? 'Enable slot' : 'Bypass slot') : 'Empty FX slot'}"></button>
+            <button type="button" class="fl-slot-led ${isOccupied && !isBypassed ? 'active is-lit' : ''}" data-fl-fx-toggle="${slotIndex}" data-track-id="${activeTrack.id}" data-fl-hint="${isOccupied ? (isBypassed ? 'Enable slot' : 'Bypass slot') : 'Empty FX slot'}"></button>
 
             <!-- Slot Plugin Name / Selector -->
-            <div class="fl-slot-name-btn" data-fl-open-slot="${slotIndex}" data-track-id="${activeTrack.id}" data-fl-hint="${isOccupied ? 'Click to open ' + def.name + ' interface' : 'Select effect to load'}">
+            <button type="button" class="fl-slot-name-btn" data-fl-open-slot="${slotIndex}" data-track-id="${activeTrack.id}" data-fl-hint="${isOccupied ? 'Click to open ' + def.name + ' interface' : 'Select effect to load'}">
               <span class="fl-slot-index">${slotIndex + 1}</span>
               <strong class="fl-slot-text">${isOccupied ? def.name : '(none)'}</strong>
-            </div>
+            </button>
+
+            <!-- Slot Reorder Controls (Move Up/Down) -->
+            ${isOccupied ? `
+              <div class="fl-slot-order-btns">
+                <button type="button" class="fl-slot-move-btn" data-fx-move-up="${slotIndex}" data-track-id="${activeTrack.id}" ${slotIndex === 0 ? 'disabled' : ''} title="Move FX Up">▲</button>
+                <button type="button" class="fl-slot-move-btn" data-fx-move-down="${slotIndex}" data-track-id="${activeTrack.id}" ${slotIndex === 9 ? 'disabled' : ''} title="Move FX Down">▼</button>
+              </div>
+            ` : ''}
 
             <!-- Wet / Dry Mix Knob -->
             <div class="fl-slot-mix-knob-wrap" data-fl-hint="Effect Mix: ${Math.round((activeFx?.wet ?? 1.0) * 100)}%">
@@ -76,6 +84,8 @@ export function renderFlMixer(state, focusTrackId = 'master') {
               <option value="delay3" ${def?.id === 'delay3' ? 'selected' : ''}>Fruity Delay 3</option>
               <option value="fastdist" ${def?.id === 'fastdist' ? 'selected' : ''}>Fruity Fast Dist</option>
               <option value="chorus" ${def?.id === 'chorus' ? 'selected' : ''}>Fruity Chorus</option>
+              <option value="waveshaper" ${def?.id === 'waveshaper' ? 'selected' : ''}>Fruity WaveShaper</option>
+              <option value="blood-overdrive" ${def?.id === 'blood-overdrive' ? 'selected' : ''}>Blood Overdrive</option>
             </select>
           </div>`;
         }).join('')}
@@ -95,12 +105,12 @@ function renderChannelStrip(state, track, index, isSelected, selectedTrackId = '
   const isRouted = track.id === 'master' ? true : !!(state.trackSends?.[selectedTrackId]?.[track.id] || (mix.send && mix.sendTarget === track.id));
   const sendVal = Math.round((state.trackSends?.[selectedTrackId]?.[track.id] ?? (mix.send ?? 0.8)) * 100);
 
-  return `<div class="fl-mixer-strip ${isSelected ? 'selected' : ''} ${track.id === 'master' ? 'master-strip' : ''}" data-track-id="${track.id}">
+  return `<div class="fl-mixer-strip ${isSelected ? 'selected is-selected' : ''} ${track.id === 'master' ? 'master-strip fl-master-strip' : ''}" data-track-id="${track.id}">
     <!-- Track Title & Index -->
-    <div class="fl-strip-head" data-fl-select-track="${track.id}" data-fl-hint="Select track ${track.name}">
-      <span class="fl-strip-num">${index === 0 ? 'M' : index}</span>
-      <span class="fl-strip-name">${track.name.toUpperCase()}</span>
-    </div>
+    <button type="button" class="fl-strip-head fl-strip-top" data-fl-select-track="${track.id}" data-fl-hint="Select track ${track.name}">
+      <span class="fl-strip-num fl-track-number">${index === 0 ? 'M' : index}</span>
+      <span class="fl-strip-name fl-track-name">${track.name.toUpperCase()}</span>
+    </button>
 
     <!-- Stereo Separation Knob -->
     <div class="fl-strip-rotary-group" data-fl-hint="Stereo Separation: ${stereoSep === 0 ? 'Normal' : stereoSep < 0 ? Math.abs(stereoSep) + '% Merged (Mono)' : stereoSep + '% Expanded (Wide)'}">
@@ -110,7 +120,7 @@ function renderChannelStrip(state, track, index, isSelected, selectedTrackId = '
 
     <!-- Polarity Invert (Ø) & Pan Pot -->
     <div class="fl-strip-pan-row">
-      <button type="button" class="fl-phase-btn ${phaseInvert ? 'active' : ''}" data-fl-phase="${track.id}" data-fl-hint="Phase / Polarity Invert (Ø)">Ø</button>
+      <button type="button" class="fl-phase-btn ${phaseInvert ? 'active is-active' : ''}" data-fl-phase="${track.id}" data-fl-hint="Phase / Polarity Invert (Ø)">Ø</button>
       <input type="range" min="-100" max="100" value="${pan}" class="fl-mini-knob pan" data-fl-strip-pan="${track.id}" data-fl-hint="Pan: ${pan === 0 ? 'C' : pan > 0 ? pan + 'R' : Math.abs(pan) + 'L'}">
     </div>
 

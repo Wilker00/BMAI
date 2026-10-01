@@ -463,6 +463,38 @@ export function applyDawSnapshotFields(state, project) {
   loadActivePatternsIntoWorking(state);
 }
 
+export function makeClipUnique(state, trackId, clipId) {
+  ensureDawState(state);
+  const trackClips = state.playlist?.[trackId];
+  if (!Array.isArray(trackClips)) return null;
+  const clip = trackClips.find(c => c.id === clipId);
+  if (!clip || !clip.patternId) return null;
+
+  // Determine kind of pattern (melody, drums, bass, chords, custom)
+  let foundKind = null;
+  let sourcePat = null;
+  for (const [kind, list] of Object.entries(state.patterns || {})) {
+    if (Array.isArray(list)) {
+      const match = list.find(p => p.id === clip.patternId);
+      if (match) {
+        foundKind = kind;
+        sourcePat = match;
+        break;
+      }
+    }
+  }
+
+  if (!foundKind || !sourcePat) return null;
+
+  const newName = `${sourcePat.name} #2`;
+  const newPat = duplicatePatternInBank(state.patterns, foundKind, sourcePat.id, newName);
+  if (!newPat) return null;
+
+  clip.patternId = newPat.id;
+  clip.id = createClipId();
+  return { clip, newPattern: newPat };
+}
+
 export {
   resolvePatternAtBar,
   clipAtBar,

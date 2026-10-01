@@ -292,3 +292,58 @@ export function sineBuffer(sampleRate, seconds, freq, amplitude = 0.25) {
   }
   return out;
 }
+
+// ─── Sidechain Routing Model ───────────────────────────────────────────
+// A sidechain route sends only the control signal (for ducking/keying)
+// without summing the audio into the destination mix bus.
+
+export function createSidechainRoute(sourceTrackId, destTrackId, amount = 1.0) {
+  return {
+    source: sourceTrackId,
+    dest: destTrackId,
+    amount: Math.max(0, Math.min(1, Number(amount) || 1)),
+    sidechainOnly: true // Audio does NOT sum — key/trigger signal only
+  };
+}
+
+export function addSidechainRoute(routes = [], sourceTrackId, destTrackId, amount = 1.0) {
+  const existing = routes.findIndex(r => r.source === sourceTrackId && r.dest === destTrackId);
+  if (existing >= 0) {
+    routes[existing].amount = Math.max(0, Math.min(1, Number(amount) || 1));
+    routes[existing].sidechainOnly = true;
+    return routes;
+  }
+  routes.push(createSidechainRoute(sourceTrackId, destTrackId, amount));
+  return routes;
+}
+
+export function removeSidechainRoute(routes = [], sourceTrackId, destTrackId) {
+  return routes.filter(r => !(r.source === sourceTrackId && r.dest === destTrackId));
+}
+
+export function getSidechainSources(routes = [], destTrackId) {
+  return routes.filter(r => r.dest === destTrackId && r.sidechainOnly);
+}
+
+// ─── FX Slot Reordering ────────────────────────────────────────────────
+// Swap two FX insert slots on a track's chain
+
+export function swapFxSlots(fxArray = [], indexA, indexB) {
+  if (!Array.isArray(fxArray)) return fxArray;
+  if (indexA < 0 || indexA >= fxArray.length) return fxArray;
+  if (indexB < 0 || indexB >= fxArray.length) return fxArray;
+  if (indexA === indexB) return fxArray;
+  const temp = fxArray[indexA];
+  fxArray[indexA] = fxArray[indexB];
+  fxArray[indexB] = temp;
+  return fxArray;
+}
+
+export function moveFxSlotUp(fxArray = [], index) {
+  return swapFxSlots(fxArray, index, index - 1);
+}
+
+export function moveFxSlotDown(fxArray = [], index) {
+  return swapFxSlots(fxArray, index, index + 1);
+}
+

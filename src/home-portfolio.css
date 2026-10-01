@@ -219,8 +219,6 @@ footer,
 .coach-btn.primary,
 .template-btn.primary,
 .studio-tool-btn.primary,
-.studio-tool-btn.on,
-.transport-playback .mode-pill.on,
 .add-project,
 .prompt button,
 #record-vocal.is-counting {
@@ -233,7 +231,7 @@ footer,
 .take-actions button.hot:hover,
 .add-project:hover { filter: brightness(1.05); }
 
-.transport-playback .mode-pill.on .mode-dot { background: var(--action-ink); }
+.transport-playback .mode-pill.on .mode-dot { background: #f5f5f5; }
 
 .chip.selected,
 .kit-row button.on,
@@ -265,7 +263,7 @@ footer,
   border-radius: 8px;
   background: var(--surface-3);
   color: var(--text);
-  font: 13px var(--font);
+  font: 600 14px/1 var(--font);
 }
 
 .idea-text strong,

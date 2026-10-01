@@ -1,0 +1,769 @@
+/* Final shell ownership: navigation, workflow, responsive layout, and shared surfaces. */
+
+#fl-top-panel-host { display: none; }
+#fl-piano-tools-host { display: block; }
+
+.workflow-roadmap {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.workflow-roadmap-title {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font: 600 10px var(--mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.workflow-roadmap-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(118px, 1fr));
+  gap: 6px;
+  width: min(880px, 100%);
+  min-width: 0;
+}
+
+.workflow-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+}
+
+.workflow-step:hover { background: var(--surface-2); color: var(--text); }
+.workflow-step.is-active {
+  border-color: transparent;
+  background: #3a3a3a;
+  color: #f5f5f5;
+  box-shadow: inset 2px 0 0 #f5f5f5;
+}
+.workflow-step.is-complete:not(.is-active) { color: var(--text); }
+
+.workflow-step-index {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  font: 600 10px var(--mono);
+}
+
+.workflow-step.is-active .workflow-step-index,
+.workflow-step.is-complete .workflow-step-index {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--ink);
+}
+
+.workflow-step-index svg { width: 13px; height: 13px; }
+.workflow-step-copy { min-width: 0; }
+.workflow-step-copy strong,
+.workflow-step-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.workflow-step-copy strong { font-size: 11px; }
+.workflow-step-copy small { color: var(--muted); font-size: 9px; }
+
+.fl-brand-badge {
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.fl-modal-backdrop,
+.fl-peq2-window,
+.fl-ch-settings-window,
+.fl-window-titlebar {
+  color: var(--text);
+  font-family: var(--font);
+}
+
+@media (max-width: 900px) {
+  .shell {
+    height: 100dvh !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .workspace {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  .workspace > .tools {
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 8px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--line) !important;
+  }
+
+  .shell.studio-view-active .workspace > .tools { display: none !important; }
+  .workspace > .tools .sidebar-title { display: none; }
+  .workspace > .tools .tool,
+  .workspace > .tools .library,
+  .workspace > .tools .nav-link,
+  .workspace > .tools .settings { flex: 0 0 auto; min-height: 38px; white-space: nowrap; }
+  .workspace > .tools .sidebar-bottom { display: flex; gap: 4px; margin: 0 0 0 auto; }
+
+  .workspace > .inspector { display: none !important; }
+
+  .workspace > .main-stage,
+  .shell:not(.studio-view-active) .workspace > .main-stage {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    padding: 16px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  .shell.studio-view-active .workspace > .main-stage { padding: 0 !important; }
+  .shell.studio-view-active .main-stage > .studio-page { flex: 1 1 auto; min-height: 0; height: auto; }
+  .shell > footer { display: none !important; }
+
+  .workflow-roadmap { padding: 6px 8px; }
+  .workflow-roadmap-title { display: none; }
+  .workflow-roadmap-steps { display: flex; width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .workflow-roadmap-steps::-webkit-scrollbar { display: none; }
+  .workflow-step { flex: 1 0 112px; }
+}
+
+@media (max-width: 760px) {
+  .fl-header-row-top { height: auto; min-height: 36px; }
+  .fl-menu-bar { display: flex; flex-wrap: wrap; }
+  .fl-logo-and-menus { min-width: 0; }
+  .fl-project-info { min-width: 0; margin-left: auto; }
+  .fl-project-title { max-width: 48vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fl-header-row-bottom { height: 46px; min-height: 46px; overflow-x: auto; overflow-y: hidden; }
+  .fl-pitch-box,
+  .fl-oscilloscope-container { display: none; }
+  .fl-window-shortcuts { margin-left: auto; }
+
+  .workspace > .tools .tool span:not(.ico),
+  .workspace > .tools .library,
+  .workspace > .tools .nav-link,
+  .workspace > .tools .settings { font-size: 11px; }
+  .workspace > .tools .tool { grid-template-columns: 18px auto; padding: 7px 8px; }
+  .workspace > .tools .tool small { display: none; }
+
+  .workflow-step { flex-basis: 52px; justify-content: center; }
+  .workflow-step-copy small { display: none; }
+  .workflow-step-copy strong { font-size: 10px; }
+
+  .desk-head { flex-direction: column; }
+  .desk-head-actions { width: 100%; flex-wrap: wrap; }
+  .desk-head-actions > * { flex: 1 1 auto; }
+  .settings-data-row { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 520px) {
+  .fl-tool-switches { display: none; }
+  .fl-lcd-time { display: none; }
+  .workflow-step { flex: 0 0 58px; padding-inline: 5px; }
+  .workflow-step-copy { display: none; }
+  .workspace > .tools .tool span:not(.ico) { display: none; }
+  .workspace > .tools .tool { grid-template-columns: 18px; }
+  .workspace > .tools .sidebar-bottom { margin-left: 0; }
+  .workspace > .tools .library,
+  .workspace > .tools .nav-link,
+  .workspace > .tools .settings { font-size: 0; width: 34px; padding: 7px; }
+  .workspace > .tools .library svg,
+  .workspace > .tools .nav-link svg,
+  .workspace > .tools .settings svg { width: 16px; height: 16px; }
+}
+
+/* New mixer markup reuses the established FL console visual contract. */
+.fl-strip-head {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+}
+
+.fl-mini-peq-box {
+  appearance: none;
+  width: 100%;
+  min-height: 74px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid #303946;
+  border-radius: 4px;
+  background: #101419;
+  color: #cbd5e1;
+  cursor: pointer;
+}
+
+.fl-mini-peq-box:hover,
+.fl-mini-peq-box:focus-visible { border-color: var(--fl-accent-orange, #ff851b); }
+.fl-mini-peq-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fl-mini-peq-label { position: relative; z-index: 1; font-size: 9px; font-weight: 800; letter-spacing: .08em; }
+
+.fl-slot-name-btn { flex: 1 1 auto; min-width: 0; cursor: pointer; }
+.fl-slot-text { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-slot-order-btns { display: flex; gap: 2px; }
+.fl-slot-move-btn {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid #3e4859;
+  border-radius: 2px;
+  background: #252b35;
+  color: #94a3b8;
+  font-size: 8px;
+  cursor: pointer;
+}
+.fl-slot-move-btn:disabled { opacity: .3; cursor: default; }
+.fl-slot-dropdown { max-width: 92px; min-width: 0; }
+.fl-slot-mix-knob { width: 34px; }
+
+.fl-browser-cat-header,
+.fl-browser-item,
+.fl-picker-item,
+.fl-slot-name-btn {
+  appearance: none;
+  width: 100%;
+  font: inherit;
+  text-align: left;
+}
+
+.fl-slot-name-btn { border: 0; background: transparent; color: inherit; padding: 0; }
+
+.fl-timeline-markers-track {
+  position: absolute;
+  inset: 18px 0 auto;
+  height: 18px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.fl-timeline-marker-flag {
+  appearance: none;
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.fl-marker-stem { position: absolute; inset: 0 auto 0 0; width: 2px; }
+.fl-marker-label {
+  position: absolute;
+  top: 0;
+  left: 2px;
+  max-width: 72px;
+  padding: 1px 4px;
+  border-radius: 0 3px 3px 0;
+  overflow: hidden;
+  color: #0b0d10;
+  font: 700 8px/14px var(--mono, monospace);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* One structure for page type, cards, fields, and buttons. */
+.main-stage > .page-stack,
+.main-stage > .desk {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.main-stage .desk-head,
+.main-stage .starter-gallery-head,
+.main-stage .desk-card-head,
+.main-stage .pattern-bank-head,
+.main-stage .desk-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.main-stage .action-bar,
+.main-stage .take-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.main-stage .desk-head,
+.main-stage .starter-gallery-head {
+  align-items: flex-end;
+}
+
+.main-stage > .page-stack > *,
+.main-stage > .desk > * {
+  flex: 0 0 auto;
+}
+
+.main-stage h1,
+.main-stage .stage-header h1 {
+  margin: 0;
+  color: var(--text);
+  font: 600 28px/1.15 var(--font);
+  letter-spacing: -0.04em;
+}
+
+.main-stage h2,
+.main-stage .desk-card h2,
+.main-stage h3,
+.main-stage .starter-gallery-head h3.template-title {
+  margin: 0;
+  color: var(--text);
+  font: 600 18px/1.25 var(--font);
+  letter-spacing: -0.03em;
+}
+
+.main-stage .eyebrow,
+.main-stage .page-lead,
+.main-stage .description,
+.main-stage .desk-starter small,
+.main-stage .choice-card small,
+.main-stage .coach-message,
+.main-stage .mini-guide,
+.main-stage .mini-guide ol,
+.main-stage .mini-guide li {
+  color: var(--muted);
+  font: 500 13px/1.45 var(--font);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.main-stage .desk-card,
+.main-stage .desk-starter,
+.main-stage .choice-card,
+.main-stage .mini-guide,
+.main-stage .next-step-coach,
+.main-stage .phrase-desk,
+.main-stage .generator,
+.main-stage .drum-top-bar,
+.main-stage .take-box,
+.main-stage .export-card,
+.main-stage .project-face,
+.main-stage .project-hub,
+.main-stage .share-pack-card,
+.main-stage .settings-form-block,
+.main-stage .vocal-drop-box,
+.main-stage .pattern-bank,
+.main-stage .fx-rack-card {
+  border: 0;
+  border-radius: 12px;
+  background: var(--panel);
+  padding: 16px;
+  box-shadow: none;
+  color: var(--text);
+}
+
+.main-stage .desk-starters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.main-stage .desk-starter {
+  align-content: start;
+  gap: 8px;
+}
+
+.main-stage .mini-guide {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+.main-stage .mini-guide .tour-kicker {
+  margin: 0 0 6px;
+  color: var(--text);
+  font: 600 12px var(--font);
+}
+
+.main-stage .mini-guide .tour-dismiss {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--surface-3);
+  color: var(--text);
+  font: 600 14px var(--font);
+}
+
+.main-stage .page-btn,
+.main-stage .chip,
+.main-stage .kit-row > button,
+.main-stage .coach-btn,
+.main-stage .pattern-chip,
+.main-stage .help-btn,
+.main-stage .back-project,
+.main-stage .prompt > button,
+.main-stage .patch-bank > button,
+.mixer-page .page-btn,
+.studio-page .studio-tool-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--surface-3);
+  color: var(--text);
+  font: 600 14px/1 var(--font);
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: none;
+}
+
+.main-stage .page-btn.hot,
+.main-stage .coach-btn.primary,
+.main-stage .add-project,
+.main-stage .prompt > button,
+.studio-page .studio-tool-btn.primary {
+  background: var(--action);
+  color: var(--action-ink);
+}
+
+.main-stage .chip.selected,
+.main-stage .chip.on,
+.main-stage .kit-row > button.on,
+.main-stage .pattern-chip.on,
+.main-stage .patch-bank > button.on,
+.studio-page .studio-tool-btn.on {
+  background: #3a3a3a;
+  color: #f5f5f5;
+  box-shadow: inset 2px 0 0 #f5f5f5;
+}
+
+.main-stage textarea,
+.main-stage select,
+.main-stage input[type="text"],
+.main-stage input[type="search"],
+.main-stage input[type="number"]:not(.pot-range):not([data-lane-vol]):not([data-lane-pan]) {
+  width: 100%;
+  min-height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.4 var(--font);
+  padding: 8px 10px;
+  box-shadow: none;
+}
+
+.main-stage .desk-card label,
+.main-stage .prompt-overrides label,
+.main-stage .form-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font: 600 13px/1.3 var(--font);
+}
+
+.main-stage .prompt-overrides,
+.main-stage .form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.mixer-page .mixer-section-head h2 {
+  margin: 0;
+  font: 600 18px/1.25 var(--font);
+  color: var(--text);
+}
+
+.mixer-page .mixer-section-head > span,
+.mixer-page .channel-strip > strong {
+  font: 600 13px var(--font);
+  color: var(--text);
+  text-transform: none;
+}
+
+.mixer-page .channel-strip {
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+}
+
+.mixer-page .channel-strip:nth-child(even) {
+  background: var(--surface-2);
+}
+
+.main-stage .idea.click-card {
+  border: 0;
+  border-radius: 12px;
+  background: var(--panel);
+  padding: 16px;
+  color: var(--text);
+  font: 600 14px/1.35 var(--font);
+  text-align: left;
+}
+
+.main-stage .idea.click-card.chosen {
+  background: #3a3a3a;
+  box-shadow: inset 2px 0 0 #f5f5f5;
+}
+
+.main-stage .ghost {
+  width: auto;
+  height: auto;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--surface-3);
+  color: var(--text);
+  font: 600 14px/1 var(--font);
+}
+
+.studio-page .studio-tabs {
+  gap: 6px;
+  padding: 8px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+.studio-page .studio-tab {
+  box-sizing: border-box;
+  height: 32px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: 600 14px/1 var(--font);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.studio-page .studio-tab.on {
+  background: #3a3a3a;
+  color: #f5f5f5;
+  box-shadow: inset 2px 0 0 #f5f5f5;
+}
+
+.studio-page .fl-picker-add-btn {
+  box-sizing: border-box;
+  height: 32px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  font: 600 14px/1 var(--font);
+}
+
+.shell .transport .mode-pill,
+.shell .transport .tap-tempo-btn,
+.shell .transport .key-trigger,
+.shell .transport .metronome,
+.shell .topbar .icon-btn,
+.studio-page .fl-pat-btn,
+.studio-page .fl-song-btn,
+.studio-page .fl-switch-btn,
+.studio-page .fl-btn-record,
+.studio-page .fl-pitch-reset {
+  box-sizing: border-box;
+  height: 32px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #2c2c2c;
+  color: #f4f4f4;
+  font: 600 14px/1 var(--font);
+  box-shadow: none;
+}
+
+.shell .transport .mode-pill.on,
+.shell .transport .metronome.metronome-on,
+.studio-page .fl-pat-btn.active,
+.studio-page .fl-song-btn.active,
+.studio-page .fl-switch-btn.active {
+  background: #3a3a3a;
+  color: #f5f5f5;
+  box-shadow: inset 2px 0 0 #f5f5f5;
+}
+
+.studio-page .fl-picker-tab,
+.studio-page .fl-picker-add-btn,
+.studio-page .fl-picker-action-btn,
+.studio-page .fl-picker-item {
+  box-sizing: border-box;
+  height: 32px;
+  min-height: 32px;
+  border: 0;
+  border-radius: 8px;
+  font: 600 14px/1 var(--font);
+  box-shadow: none;
+}
+
+.studio-page .fl-picker-tab {
+  padding: 0 12px;
+  background: transparent;
+  color: #a3a3a3;
+}
+
+.studio-page .fl-picker-tab.active {
+  background: #3a3a3a;
+  color: #f5f5f5;
+  box-shadow: inset 2px 0 0 #f5f5f5;
+}
+
+.studio-page .fl-picker-add-btn {
+  background: #f5f5f5;
+  color: #1a1a1a;
+}
+
+.studio-page .fl-picker-action-btn,
+.studio-page .fl-picker-item {
+  padding: 0 12px;
+  background: #2c2c2c;
+  color: #f4f4f4;
+}
+
+.studio-page .fl-picker-list .fl-picker-item.selected {
+  background: #3a3a3a;
+  color: #f5f5f5;
+  box-shadow: inset 2px 0 0 #f5f5f5;
+}
+
+.main-stage .studio-page .fl-picker-input,
+.studio-page .pl-select,
+.main-stage .studio-page .studio-search input {
+  box-sizing: border-box;
+  height: 36px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: #0c0c0c;
+  color: #f4f4f4;
+  font: 14px/1 var(--font);
+  box-shadow: none;
+}
+
+.shell .topbar .icon-btn .ico { font-size: 14px; }
+
+.shell > .transport {
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.shell > .transport > .transport-controls,
+.shell > .transport > .studio-feature-host,
+.shell > .transport > .tempo,
+.shell > .transport > .transport-right {
+  flex: 0 0 auto;
+  min-width: max-content;
+}
+
+.studio-feature-host > *,
+.shell .transport .tempo > * {
+  flex: 0 0 auto;
+}
+
+.studio-feature-host .fl-btn-record {
+  flex: 0 0 32px;
+  width: 32px;
+  min-width: 32px;
+}
+
+.shell .transport .fl-pitch-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 0 0 88px;
+  width: 88px;
+  height: 4px;
+  margin: 0;
+  border: 0;
+  border-radius: 99px;
+  background: #3a3a3a;
+  accent-color: #f5f5f5;
+}
+
+.shell .transport .fl-pitch-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: #f5f5f5;
+}
+
+.shell .transport .fl-pitch-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: #f5f5f5;
+}
+
+.shell .transport .tempo-field input {
+  width: 52px;
+  min-width: 52px;
+  background: transparent;
+}
+
+.shell .transport .meter-chip {
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #2c2c2c;
+  color: #f4f4f4;
+  font: 600 14px/1 var(--font);
+  letter-spacing: 0;
+}
+
+@media (max-width: 900px) {
+  .main-stage .desk-starters,
+  .main-stage .prompt-overrides,
+  .main-stage .form-grid {
+    grid-template-columns: 1fr;
+  }
+}

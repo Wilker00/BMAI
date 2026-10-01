@@ -56,19 +56,19 @@ export function renderFlPickerPanel(state, {
       ${activeTab === 'patterns' ? (
         filteredPatterns.length ? filteredPatterns.map(pat => {
           const isSelected = pat.id === (activePatternId || state.activePatternIds?.[pat.kind]);
-          return `<div class="fl-picker-item ${isSelected ? 'selected' : ''}" data-picker-pattern-id="${pat.id}" data-picker-kind="${pat.kind}" title="Click to stamp ${pat.label} onto playlist">
+          return `<button type="button" class="fl-picker-item ${isSelected ? 'selected' : ''}" data-picker-pattern-id="${pat.id}" data-picker-kind="${pat.kind}" title="Click to stamp ${pat.label} onto playlist">
             <span class="fl-picker-color-tag" style="background: ${pat.color}"></span>
             <span class="fl-picker-item-name">${pat.label}</span>
             <span class="fl-picker-bars">${pat.bars || 1}B</span>
-          </div>`;
+          </button>`;
         }).join('') : `<div class="fl-picker-empty">No patterns found</div>`
       ) : (
         filteredAudio.length ? filteredAudio.map(aud => {
-          return `<div class="fl-picker-item" data-picker-audio-id="${aud.id}" title="Click to place ${aud.label} onto playlist">
+          return `<button type="button" class="fl-picker-item" data-picker-audio-id="${aud.id}" title="Click to place ${aud.label} onto playlist">
             <span class="fl-picker-color-tag" style="background: ${aud.color}"></span>
             <span class="fl-picker-item-name">${aud.label}</span>
             <span class="fl-picker-bars">WAV</span>
-          </div>`;
+          </button>`;
         }).join('') : `<div class="fl-picker-empty">No audio clips loaded</div>`
       )}
     </div>

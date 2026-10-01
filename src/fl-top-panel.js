@@ -23,7 +23,7 @@ export function renderFlFruitLogo(size = 20) {
     <!-- Highlight shine -->
     <ellipse cx="12" cy="16" rx="4" ry="2.2" transform="rotate(-30 12 16)" fill="rgba(255, 255, 255, 0.45)" />
     <!-- Stem tip -->
-    <circle cx="16" cy="10.5" r="1.2" fill="#3d2105" />
+    <circle cx="16" cy="10.5" r="1.2" fill="#1a1a1a" />
   </svg>`;
 }
 
@@ -131,10 +131,10 @@ export function renderFlTransportHeader(state, { playing = false, activePatternN
     <!-- Top Row: Logo, Menu Bar, Project Title, Hint Bar -->
     <div class="fl-header-row-top">
       <div class="fl-logo-and-menus">
-        <div class="fl-brand-badge" data-fl-hint="BMAI Studio - Home" data-action="go-home">
+        <button type="button" class="fl-brand-badge" data-fl-hint="BMAI Studio - Home" data-action="go-home" aria-label="Open Projects home">
           ${renderFlFruitLogo(22)}
-          <span class="fl-brand-text">BMAI STUDIO</span>
-        </div>
+          <span class="fl-brand-text">BMAI</span>
+        </button>
         ${renderFlTopMenuBar()}
       </div>
 
@@ -261,4 +261,26 @@ export function renderFlTransportHeader(state, { playing = false, activePatternN
       <span class="fl-hint-value" id="fl-hint-value"></span>
     </div>
   </div>`;
+}
+
+export function renderFlSessionControls(state, { activePatternName = 'Pattern 1', typingKeyboardOn = false } = {}) {
+  const songMode = state.flPlaybackMode === 'song';
+  const masterPitch = Number(state.masterPitch) || 0;
+  const countIn = !!state.countIn;
+  const loopOn = !!state.transport?.loopEnabled;
+  return `<div class="fl-pat-song-toggle" data-fl-hint="Switch between pattern playback and the full song">
+      <button type="button" class="fl-pat-btn ${!songMode ? 'active' : ''}" data-fl-playback-mode="pat" data-fl-hint="PAT: Play current pattern (${activePatternName})">PAT</button>
+      <button type="button" class="fl-song-btn ${songMode ? 'active' : ''}" data-fl-playback-mode="song" data-fl-hint="SONG: Play the arrangement">SONG</button>
+    </div>
+    <button type="button" class="fl-btn-record" id="fl-record" data-fl-hint="Record audio (R)" aria-label="Record"><span class="fl-rec-dot"></span></button>
+    <label class="fl-pitch-box" data-fl-hint="Master pitch, -12 to +12 semitones. Click the value to reset.">
+      <span class="fl-pitch-label">Pitch</span>
+      <input type="range" min="-12" max="12" step="1" value="${masterPitch}" id="fl-master-pitch" class="fl-pitch-slider" aria-label="Master pitch" />
+      <button type="button" class="fl-pitch-reset" id="fl-pitch-reset" title="Reset master pitch">${masterPitch > 0 ? '+' : ''}${masterPitch}</button>
+    </label>
+    <div class="fl-tool-switches">
+      <button type="button" class="fl-switch-btn ${countIn ? 'active' : ''}" id="fl-count-in" data-fl-hint="Count-in: one bar of clicks before recording" aria-pressed="${countIn}">PRE</button>
+      <button type="button" class="fl-switch-btn ${loopOn ? 'active' : ''}" id="fl-loop" data-fl-hint="Loop the playback region" aria-pressed="${loopOn}">LOOP</button>
+      <button type="button" class="fl-switch-btn ${typingKeyboardOn ? 'active' : ''}" id="fl-typing-toggle" data-fl-hint="Typing keyboard: play notes from the computer keyboard" aria-pressed="${typingKeyboardOn}">KEYB</button>
+    </div>`;
 }

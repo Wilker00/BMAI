@@ -5,18 +5,18 @@ export const FL_THEMES = {
   charcoal: {
     name: 'Charcoal Dark',
     vars: {
-      '--fl-bg-rack': '#141414',
-      '--fl-bg-strip': '#1a1a1a',
-      '--fl-bg-strip-alt': '#141414',
-      '--fl-bg-panel': '#222222',
-      '--fl-bg-dark': '#0c0c0c',
-      '--fl-border': '#3a3a3a',
-      '--fl-border-light': '#5c5c5c',
-      '--fl-led-green': '#7dba9a',
-      '--fl-accent-orange': '#c8c8c8',
-      '--fl-accent-cyan': '#f5f5f5',
-      '--fl-text-main': '#f4f4f4',
-      '--fl-text-muted': '#a3a3a3'
+      '--fl-bg-rack': 'var(--panel)',
+      '--fl-bg-strip': 'var(--surface-2)',
+      '--fl-bg-strip-alt': 'var(--panel)',
+      '--fl-bg-panel': 'var(--panel2)',
+      '--fl-bg-dark': 'var(--bg)',
+      '--fl-border': 'var(--line)',
+      '--fl-border-light': 'var(--line-strong)',
+      '--fl-led-green': 'var(--success)',
+      '--fl-accent-orange': 'var(--action)',
+      '--fl-accent-cyan': 'var(--action)',
+      '--fl-text-main': 'var(--text)',
+      '--fl-text-muted': 'var(--muted)'
     }
   },
   midnight: {
@@ -72,14 +72,15 @@ export const FL_THEMES = {
   }
 };
 
-export function applyFlTheme(themeName) {
-  const theme = FL_THEMES[themeName] || FL_THEMES.charcoal;
+export function applyFlTheme() {
+  const theme = FL_THEMES.charcoal;
   const root = document.documentElement;
   if (!root) return;
   for (const [prop, val] of Object.entries(theme.vars)) {
     root.style.setProperty(prop, val);
   }
   try {
-    localStorage.setItem('fl-theme-choice', themeName);
+    localStorage.setItem('fl-theme-choice', 'charcoal');
   } catch {}
 }
+

@@ -183,12 +183,12 @@ function renderGrossBeatUi(params) {
       <div class="fl-gb-mix-controls">
         <div class="fl-gb-knob">
           <label>TIME MIX</label>
-          <input type="range" min="0" max="100" value="${Math.round((params.timeMix ?? 1) * 100)}" id="fl-gb-time-mix">
+          <input type="range" min="0" max="100" value="${Math.round((params.timeMix ?? 1) * 100)}" id="fl-gb-time-mix" data-plugin-param="timeMix" data-plugin-scale="100">
           <output id="fl-gb-time-mix-out">${Math.round((params.timeMix ?? 1) * 100)}%</output>
         </div>
         <div class="fl-gb-knob">
           <label>VOL MIX</label>
-          <input type="range" min="0" max="100" value="${Math.round((params.volMix ?? 1) * 100)}" id="fl-gb-vol-mix">
+          <input type="range" min="0" max="100" value="${Math.round((params.volMix ?? 1) * 100)}" id="fl-gb-vol-mix" data-plugin-param="volMix" data-plugin-scale="100">
           <output id="fl-gb-vol-mix-out">${Math.round((params.volMix ?? 1) * 100)}%</output>
         </div>
       </div>
@@ -288,27 +288,27 @@ function renderMaximusUi(params) {
     <div class="fl-max-controls">
       <div class="fl-max-knob">
         <label>LOW GAIN</label>
-        <input type="range" min="0" max="200" value="${Math.round(lowG * 100)}" id="fl-max-low">
+        <input type="range" min="0" max="200" value="${Math.round(lowG * 100)}" id="fl-max-low" data-plugin-param="lowGain" data-plugin-scale="100">
         <output id="fl-max-low-out">${(lowG * 100).toFixed(0)}%</output>
       </div>
       <div class="fl-max-knob">
         <label>MID GAIN</label>
-        <input type="range" min="0" max="200" value="${Math.round(midG * 100)}" id="fl-max-mid">
+        <input type="range" min="0" max="200" value="${Math.round(midG * 100)}" id="fl-max-mid" data-plugin-param="midGain" data-plugin-scale="100">
         <output id="fl-max-mid-out">${(midG * 100).toFixed(0)}%</output>
       </div>
       <div class="fl-max-knob">
         <label>HIGH GAIN</label>
-        <input type="range" min="0" max="200" value="${Math.round(highG * 100)}" id="fl-max-high">
+        <input type="range" min="0" max="200" value="${Math.round(highG * 100)}" id="fl-max-high" data-plugin-param="highGain" data-plugin-scale="100">
         <output id="fl-max-high-out">${(highG * 100).toFixed(0)}%</output>
       </div>
       <div class="fl-max-knob">
         <label>SATURATION</label>
-        <input type="range" min="0" max="100" value="${sat}" id="fl-max-sat">
+        <input type="range" min="0" max="100" value="${sat}" id="fl-max-sat" data-plugin-param="saturation">
         <output id="fl-max-sat-out">${sat}%</output>
       </div>
       <div class="fl-max-knob">
         <label>CEILING</label>
-        <input type="range" min="-12" max="0" step="0.1" value="${ceil}" id="fl-max-ceil">
+        <input type="range" min="-12" max="0" step="0.1" value="${ceil}" id="fl-max-ceil" data-plugin-param="ceiling">
         <output id="fl-max-ceil-out">${ceil} dB</output>
       </div>
     </div>
@@ -329,7 +329,7 @@ function renderSoundgoodizerUi(params) {
         <div class="fl-sg-dial" id="fl-sg-dial" style="transform: rotate(${angle}deg);">
           <div class="fl-sg-dot"></div>
         </div>
-        <input type="range" min="0" max="100" value="${amount}" class="fl-sg-range" id="fl-sg-amount" aria-label="Soundgoodizer amount">
+        <input type="range" min="0" max="100" value="${amount}" class="fl-sg-range" id="fl-sg-amount" data-plugin-param="amount" aria-label="Soundgoodizer amount">
       </div>
       <div class="fl-sg-readout" id="fl-sg-readout">${amount}%</div>
 
@@ -479,22 +479,22 @@ function renderBloodOverdriveUi(params) {
     <div class="fl-blood-controls">
       <div class="fl-param-knob">
         <label>PREBAND</label>
-        <input type="range" min="50" max="300" value="${Math.round(preBand * 100)}" id="fl-bo-preband">
+        <input type="range" min="50" max="300" value="${Math.round(preBand * 100)}" id="fl-bo-preband" data-plugin-param="preBand" data-plugin-scale="100">
         <output>${preBand.toFixed(1)}x</output>
       </div>
       <div class="fl-param-knob">
         <label>COLOR</label>
-        <input type="range" min="0" max="100" value="${Math.round(color * 100)}" id="fl-bo-color">
+        <input type="range" min="0" max="100" value="${Math.round(color * 100)}" id="fl-bo-color" data-plugin-param="color" data-plugin-scale="100">
         <output>${Math.round(color * 100)}%</output>
       </div>
       <div class="fl-param-knob">
         <label>PREAMP (DRIVE)</label>
-        <input type="range" min="10" max="500" value="${Math.round(preAmp * 100)}" id="fl-bo-preamp">
+        <input type="range" min="10" max="500" value="${Math.round(preAmp * 100)}" id="fl-bo-preamp" data-plugin-param="preAmp" data-plugin-scale="100">
         <output>${preAmp.toFixed(1)}x</output>
       </div>
       <div class="fl-param-knob">
         <label>POST GAIN</label>
-        <input type="range" min="10" max="200" value="${Math.round(postGain * 100)}" id="fl-bo-post">
+        <input type="range" min="10" max="200" value="${Math.round(postGain * 100)}" id="fl-bo-post" data-plugin-param="postGain" data-plugin-scale="100">
         <output>${postGain.toFixed(1)}x</output>
       </div>
     </div>
@@ -514,17 +514,17 @@ function renderLimiterUi(params) {
     <div class="fl-lim-controls">
       <div class="fl-fader-col">
         <label>CEIL</label>
-        <input type="range" min="-12" max="0" step="0.1" value="${ceil}" id="fl-lim-ceil">
+        <input type="range" min="-12" max="0" step="0.1" value="${ceil}" id="fl-lim-ceil" data-plugin-param="ceiling">
         <output id="fl-lim-ceil-out">${ceil} dB</output>
       </div>
       <div class="fl-fader-col">
         <label>THRESH</label>
-        <input type="range" min="-36" max="0" step="0.5" value="${thresh}" id="fl-lim-thresh">
+        <input type="range" min="-36" max="0" step="0.5" value="${thresh}" id="fl-lim-thresh" data-plugin-param="threshold">
         <output id="fl-lim-thresh-out">${thresh} dB</output>
       </div>
       <div class="fl-fader-col">
         <label>GAIN</label>
-        <input type="range" min="0" max="18" step="0.5" value="${gain}" id="fl-lim-gain">
+        <input type="range" min="0" max="18" step="0.5" value="${gain}" id="fl-lim-gain" data-plugin-param="gain">
         <output id="fl-lim-gain-out">+${gain} dB</output>
       </div>
     </div>
@@ -546,22 +546,22 @@ function renderReverb2Ui(params) {
     <div class="fl-reverb-controls">
       <div class="fl-param-knob">
         <label>DECAY</label>
-        <input type="range" min="0.2" max="10" step="0.1" value="${decay}" id="fl-rev-decay">
+        <input type="range" min="0.2" max="10" step="0.1" value="${decay}" id="fl-rev-decay" data-plugin-param="decay">
         <output id="fl-rev-decay-out">${decay}s</output>
       </div>
       <div class="fl-param-knob">
         <label>ROOM</label>
-        <input type="range" min="10" max="100" value="${room}" id="fl-rev-room">
+        <input type="range" min="10" max="100" value="${room}" id="fl-rev-room" data-plugin-param="roomSize">
         <output id="fl-rev-room-out">${room}%</output>
       </div>
       <div class="fl-param-knob">
         <label>DRY</label>
-        <input type="range" min="0" max="100" value="${dry}" id="fl-rev-dry">
+        <input type="range" min="0" max="100" value="${dry}" id="fl-rev-dry" data-plugin-param="dry">
         <output id="fl-rev-dry-out">${dry}%</output>
       </div>
       <div class="fl-param-knob">
         <label>WET</label>
-        <input type="range" min="0" max="100" value="${wet}" id="fl-rev-wet">
+        <input type="range" min="0" max="100" value="${wet}" id="fl-rev-wet" data-plugin-param="wet">
         <output id="fl-rev-wet-out">${wet}%</output>
       </div>
     </div>
@@ -576,7 +576,7 @@ function renderDelay3Ui(params) {
     <div class="fl-delay-row">
       <div class="fl-delay-setting">
         <label>TIME</label>
-        <select id="fl-delay-time" class="fl-rack-select">
+        <select id="fl-delay-time" class="fl-rack-select" data-plugin-param="time">
           <option value="1/2" ${time === '1/2' ? 'selected' : ''}>1/2 Note</option>
           <option value="1/4" ${time === '1/4' ? 'selected' : ''}>1/4 Beat</option>
           <option value="1/8" ${time === '1/8' ? 'selected' : ''}>1/8 Beat</option>
@@ -587,12 +587,12 @@ function renderDelay3Ui(params) {
       </div>
       <div class="fl-param-knob">
         <label>FEEDBACK</label>
-        <input type="range" min="0" max="95" value="${fb}" id="fl-delay-fb">
+        <input type="range" min="0" max="95" value="${fb}" id="fl-delay-fb" data-plugin-param="feedback">
         <output id="fl-delay-fb-out">${fb}%</output>
       </div>
       <div class="fl-param-knob">
         <label>PING PONG</label>
-        <button type="button" class="fl-btn-switch active" id="fl-delay-pp">ON</button>
+        <button type="button" class="fl-btn-switch ${params.pingpong === false ? '' : 'active'}" id="fl-delay-pp">${params.pingpong === false ? 'OFF' : 'ON'}</button>
       </div>
     </div>
   </div>`;
@@ -609,12 +609,12 @@ function renderFastDistUi(params) {
     <div class="fl-dist-row">
       <div class="fl-param-knob">
         <label>PREAMP</label>
-        <input type="range" min="0" max="100" value="${preamp}" id="fl-dist-preamp">
+        <input type="range" min="0" max="100" value="${preamp}" id="fl-dist-preamp" data-plugin-param="preamp">
         <output id="fl-dist-preamp-out">${preamp}%</output>
       </div>
       <div class="fl-param-knob">
         <label>TONE</label>
-        <input type="range" min="0" max="100" value="${tone}" id="fl-dist-tone">
+        <input type="range" min="0" max="100" value="${tone}" id="fl-dist-tone" data-plugin-param="tone">
         <output id="fl-dist-tone-out">${tone < 50 ? 'Dark' : tone > 50 ? 'Bright' : 'Neutral'}</output>
       </div>
     </div>
@@ -629,12 +629,12 @@ function renderChorusUi(params) {
     <div class="fl-chorus-row">
       <div class="fl-param-knob">
         <label>SPEED</label>
-        <input type="range" min="0.1" max="5.0" step="0.1" value="${speed}" id="fl-chorus-speed">
+        <input type="range" min="0.1" max="5.0" step="0.1" value="${speed}" id="fl-chorus-speed" data-plugin-param="speed">
         <output id="fl-chorus-speed-out">${speed} Hz</output>
       </div>
       <div class="fl-param-knob">
         <label>DEPTH</label>
-        <input type="range" min="0" max="100" value="${depth}" id="fl-chorus-depth">
+        <input type="range" min="0" max="100" value="${depth}" id="fl-chorus-depth" data-plugin-param="depth">
         <output id="fl-chorus-depth-out">${depth}%</output>
       </div>
     </div>

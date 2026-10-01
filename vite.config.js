@@ -4,7 +4,7 @@ export default defineConfig({
   base: './',
   server: {
     watch: {
-      ignored: ['**/.edge-audit-desktop/**', '**/dist/**']
+      ignored: ['**/.edge-audit-desktop/**', '**/chrome-home-desktop/**', '**/dist/**']
     }
   },
   build: {

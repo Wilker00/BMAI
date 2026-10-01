@@ -16,6 +16,7 @@ const icons = {
   equalizer: '<path d="M5 18V10M12 18V6M19 18v-5"/>',
   dashboard: '<rect x="3" y="3" width="8" height="8" rx="1.2"/><rect x="13" y="3" width="8" height="5" rx="1.2"/><rect x="13" y="10" width="8" height="11" rx="1.2"/><rect x="3" y="13" width="8" height="8" rx="1.2"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M5.8 5.8l1.6 1.6M16.6 16.6l1.6 1.6M18.2 5.8l-1.6 1.6M7.4 16.6l-1.6 1.6"/>',
+  check: '<path d="M5 12.5l4.2 4.2L19 7"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
   volume_up: '<path d="M4 10h4l5-4v12l-5-4H4z"/><path d="M16 9.5a3.5 3.5 0 0 1 0 5"/><path d="M18.2 7.2a6.5 6.5 0 0 1 0 9.6"/>',
   volume_off: '<path d="M4 10h4l5-4v12l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/>',
