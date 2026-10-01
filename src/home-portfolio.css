@@ -48,12 +48,12 @@ footer,
 .tool svg { width: 16px; height: 16px; color: var(--text); }
 .tool:hover { background: var(--surface-2); color: var(--text); border: 0; }
 .tool.active {
-  background: color-mix(in srgb, var(--action) 16%, transparent);
-  color: var(--text);
+  background: #3a3a3a;
+  color: #f5f5f5;
   border: 0;
-  box-shadow: inset 2px 0 0 var(--action);
+  box-shadow: inset 2px 0 0 #f5f5f5;
 }
-.tool.active svg { color: var(--action); }
+.tool.active svg { color: #f5f5f5; }
 .tool.active::before { display: none; }
 
 .sidebar-bottom {
@@ -73,7 +73,7 @@ footer,
 .settings:hover,
 .nav-link:hover { background: var(--surface-2); color: var(--text); }
 .nav-link.on,
-.settings.on { color: var(--text); background: color-mix(in srgb, var(--action) 16%, transparent); }
+.settings.on { color: #f5f5f5; background: #3a3a3a; box-shadow: inset 2px 0 0 #f5f5f5; }
 
 .playhead,
 .arrange-playhead,
@@ -83,7 +83,7 @@ footer,
   box-shadow: none;
 }
 
-.page-stack { max-width: 980px; }
+.page-stack { max-width: none; }
 .desk { gap: 20px; }
 
 .desk-head {
@@ -248,10 +248,10 @@ footer,
 .chain-tile.on,
 .pattern-chip.on,
 .step.on {
-  background: color-mix(in srgb, var(--action) 22%, var(--panel));
-  color: var(--text);
+  background: #3a3a3a;
+  color: #f5f5f5;
   border-color: transparent;
-  box-shadow: inset 0 0 0 1px var(--action);
+  box-shadow: inset 2px 0 0 #f5f5f5;
 }
 
 .chip,
@@ -285,7 +285,7 @@ footer,
 .template-genre,
 .tour-step-count,
 .honesty-head {
-  background: color-mix(in srgb, var(--action) 18%, transparent);
+  background: var(--surface-2);
   color: var(--text);
   border: 0;
 }
@@ -297,7 +297,7 @@ footer,
   font: 12px var(--font);
 }
 .session-pill.saved {
-  background: color-mix(in srgb, var(--action) 16%, transparent);
+  background: color-mix(in srgb, var(--success) 22%, transparent);
   color: var(--text);
   border: 0;
 }
@@ -399,9 +399,10 @@ footer,
 }
 .pl-btn.active,
 .playlist-badge.song {
-  background: color-mix(in srgb, var(--action) 22%, var(--panel));
-  color: var(--text);
+  background: #3a3a3a;
+  color: #f5f5f5;
   border-color: transparent;
+  box-shadow: inset 2px 0 0 #f5f5f5;
 }
 
 .mix-row {
@@ -448,9 +449,9 @@ footer,
 
 .master-btn.on,
 .tuned-808-btn.on {
-  background: color-mix(in srgb, var(--action) 18%, var(--panel));
-  color: var(--text);
-  box-shadow: inset 0 0 0 1px var(--action);
+  background: #3a3a3a;
+  color: #f5f5f5;
+  box-shadow: inset 2px 0 0 #f5f5f5;
 }
 .master-led,
 .master-btn.on .master-led { background: var(--action); }

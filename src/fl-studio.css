@@ -1,0 +1,4139 @@
+/* ==========================================================================
+   FL Studio Design System for BMAI Studio
+   Channel Rack, Mixer Console, 10 FX Insert Slots, and Plugin Interfaces
+   ========================================================================== */
+
+:root {
+  --fl-bg-rack: #141414;
+  --fl-bg-strip: #1a1a1a;
+  --fl-bg-strip-alt: #141414;
+  --fl-bg-panel: #222222;
+  --fl-bg-dark: #0c0c0c;
+  --fl-border: #3a3a3a;
+  --fl-border-light: #5c5c5c;
+  --fl-led-green: #7dba9a;
+  --fl-led-green-glow: transparent;
+  --fl-accent-orange: #c8c8c8;
+  --fl-accent-cyan: #f5f5f5;
+  --fl-text-main: #f4f4f4;
+  --fl-text-muted: #a3a3a3;
+  --fl-pad-light: #2c2c2c;
+  --fl-pad-dark: #1a1a1a;
+}
+
+/* --------------------------------------------------------------------------
+   FL Channel Rack
+   -------------------------------------------------------------------------- */
+.fl-channel-rack {
+  display: flex;
+  flex-direction: column;
+  background: var(--fl-bg-rack);
+  border: 1px solid var(--fl-border);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  user-select: none;
+}
+
+.fl-rack-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: #181b20;
+  border-bottom: 1px solid var(--fl-border);
+  gap: 12px;
+}
+
+.fl-rack-toolbar-left, .fl-rack-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fl-rack-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #717d91;
+  text-transform: uppercase;
+}
+
+.fl-pattern-selector-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fl-rack-select {
+  background: #252b35;
+  color: var(--fl-text-main);
+  border: 1px solid var(--fl-border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  outline: none;
+}
+
+.fl-rack-icon-btn {
+  background: #2e3542;
+  color: var(--fl-text-main);
+  border: 1px solid var(--fl-border-light);
+  border-radius: 3px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: bold;
+}
+.fl-rack-icon-btn:hover { background: #3c4657; }
+
+.fl-length-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fl-chip-group {
+  display: flex;
+  gap: 4px;
+}
+
+.fl-rack-chip {
+  background: #222730;
+  color: var(--fl-text-muted);
+  border: 1px solid var(--fl-border);
+  border-radius: 3px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fl-rack-chip.is-active {
+  background: #3b82f6;
+  border-color: #60a5fa;
+  color: #fff;
+}
+
+.fl-swing-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fl-mini-knob-well {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #14171c;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #2a313d;
+}
+
+.fl-swing-val {
+  font-size: 10px;
+  font-family: monospace;
+  color: var(--fl-accent-cyan);
+  min-width: 28px;
+}
+
+.fl-rack-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #222730;
+  color: var(--fl-text-main);
+  border: 1px solid var(--fl-border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fl-rack-tool-btn:hover { background: #2d3440; }
+.fl-rack-tool-btn.is-active {
+  background: #1e3a5f;
+  border-color: var(--text);
+  color: var(--text);
+}
+
+/* Channels List */
+.fl-rack-channels-container {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 10px;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.fl-channel-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #191c22;
+  border: 1px solid #282f3a;
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+.fl-channel-row.is-muted { opacity: 0.45; }
+.fl-channel-row.is-selected {
+  border-color: var(--text);
+  background: #1d232c;
+}
+
+.fl-channel-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 250px;
+}
+
+/* Pan & Vol Pots */
+.fl-rack-pot {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  background: #121418;
+  border: 1px solid #333c4a;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.fl-rack-pot.vol { border-color: var(--text)44; }
+
+.fl-knob-range {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.fl-pot-tick {
+  width: 2px;
+  height: 7px;
+  background: var(--muted);
+  border-radius: 1px;
+}
+
+/* Mixer Spinner */
+.fl-mixer-spinner {
+  display: flex;
+  align-items: center;
+  background: #121418;
+  border: 1px solid #2e3540;
+  border-radius: 3px;
+  overflow: hidden;
+  height: 22px;
+}
+.fl-spin-down, .fl-spin-up {
+  background: #222731;
+  color: var(--muted);
+  border: 0;
+  width: 14px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: bold;
+}
+.fl-spin-down:hover, .fl-spin-up:hover { background: #2d3542; color: #fff; }
+.fl-spinner-num {
+  padding: 0 5px;
+  font-size: 10px;
+  font-family: monospace;
+  font-weight: 700;
+  color: var(--fl-accent-orange);
+  min-width: 18px;
+  text-align: center;
+}
+
+/* Green LED Mute */
+.fl-led-wrapper {
+  display: flex;
+  align-items: center;
+}
+.fl-led-lamp {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #252e25;
+  border: 1px solid #384d38;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: inset 0 1px 2px #000;
+}
+.fl-led-lamp.is-on {
+  background: var(--fl-led-green);
+  border-color: #a7f3d0;
+  box-shadow: 0 0 8px var(--fl-led-green-glow), inset 0 1px 1px #fff;
+}
+
+/* Select Bar */
+.fl-select-bar {
+  width: 4px;
+  height: 24px;
+  background: #252b35;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.fl-select-bar.is-active {
+  background: var(--fl-led-green);
+  box-shadow: 0 0 6px var(--fl-led-green-glow);
+}
+
+/* FL Channel Button */
+.fl-btn-wrapper {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 2px;
+}
+.fl-channel-btn {
+  flex: 1;
+  height: 26px;
+  background: linear-gradient(180deg, #333a46 0%, #222730 100%);
+  border: 1px solid #434c5b;
+  border-radius: 3px;
+  color: var(--fl-text-main);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0 8px;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15), 0 2px 4px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fl-channel-btn:active {
+  background: #1d222a;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.fl-channel-menu-trigger {
+  width: 20px;
+  height: 26px;
+  background: #262c36;
+  border: 1px solid #3c4452;
+  border-radius: 3px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: bold;
+}
+.fl-channel-menu-trigger:hover { background: #323a48; color: #fff; }
+
+/* Step Sequencer Grid (Classic FL 4-Step Color Block Pads) */
+.fl-step-grid {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  min-width: 320px;
+}
+
+.fl-step-pad {
+  position: relative;
+  height: 26px;
+  border-radius: 3px;
+  border: 1px solid;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+/* Light 4-step block */
+.fl-step-pad.block-light {
+  background: linear-gradient(180deg, #444c58 0%, #353c46 100%);
+  border-color: #555f6f #2a3038 #2a3038 #555f6f;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+/* Dark 4-step block */
+.fl-step-pad.block-dark {
+  background: linear-gradient(180deg, #2b313a 0%, #20242b 100%);
+  border-color: #3a424e #171a1f #171a1f #3a424e;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Active Step (Lit Pad) */
+.fl-step-pad.is-active {
+  background: linear-gradient(180deg, #4ade80 0%, #22c55e 100%) !important;
+  border-color: #86efac #15803d #15803d #86efac !important;
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.5), inset 0 1px 1px #fff !important;
+}
+
+/* Playhead Highlight */
+.fl-step-pad.is-now {
+  outline: 2px solid #fff;
+  outline-offset: -1px;
+}
+
+.fl-pad-vel {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.35);
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.fl-pad-roll {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-size: 8px;
+  font-weight: 800;
+  color: #000;
+  background: #ffeb3b;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+/* Graph Editor Drawer */
+.fl-graph-editor-drawer {
+  background: #14171c;
+  border-top: 1px solid var(--fl-border);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fl-graph-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fl-graph-channel-tag {
+  font-size: 11px;
+  color: var(--muted);
+}
+.fl-graph-channel-tag strong { color: var(--fl-accent-cyan); }
+
+.fl-graph-tabs {
+  display: flex;
+  gap: 4px;
+}
+.fl-graph-tab {
+  background: #20252e;
+  color: var(--muted);
+  border: 1px solid #2d3441;
+  border-radius: 3px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fl-graph-tab.is-active {
+  background: #2563eb;
+  border-color: #3b82f6;
+  color: #fff;
+}
+
+.fl-graph-hint {
+  font-size: 9px;
+  color: var(--muted);
+}
+
+.fl-graph-bars-area {
+  display: grid;
+  gap: 3px;
+  height: 80px;
+  padding-left: 258px; /* align with steps */
+}
+
+.fl-graph-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+.fl-graph-col.is-empty { opacity: 0.35; }
+
+.fl-graph-bar-well {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  background: #1c2128;
+  border: 1px solid #28303a;
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+.fl-graph-bar-fill {
+  width: 100%;
+  background: linear-gradient(180deg, var(--text) 0%, #1e40af 100%);
+  border-top: 2px solid #7dd3fc;
+}
+
+.fl-graph-bar-range {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: ns-resize;
+}
+
+.fl-graph-bar-label {
+  font-size: 8px;
+  font-family: monospace;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.fl-rack-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: #16181e;
+  border-top: 1px solid var(--fl-border);
+}
+
+.fl-add-channel-btn {
+  background: #222730;
+  color: var(--fl-accent-cyan);
+  border: 1px dashed #3a4556;
+  border-radius: 4px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.fl-add-channel-btn:hover {
+  background: #2d3542;
+  border-color: #60a5fa;
+}
+
+.fl-rack-status-tip {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   FL Mixer Console
+   -------------------------------------------------------------------------- */
+.fl-mixer-console {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: 12px;
+  height: 100%;
+  min-height: 480px;
+  background: #121418;
+  border: 1px solid var(--fl-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.fl-mixer-strips-viewport {
+  display: flex;
+  overflow-x: auto;
+  background: #16191f;
+  border-right: 1px solid var(--fl-border);
+  scrollbar-width: thin;
+}
+
+.fl-mixer-inserts-rack {
+  display: flex;
+  overflow-x: visible;
+}
+
+/* Channel Strips */
+.fl-mixer-strip {
+  width: 90px;
+  flex: 0 0 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--fl-bg-strip);
+  border-right: 1px solid #232832;
+  padding: 6px 4px;
+  gap: 6px;
+  user-select: none;
+  cursor: pointer;
+}
+.fl-mixer-strip:nth-child(even) { background: var(--fl-bg-strip-alt); }
+.fl-mixer-strip.is-selected {
+  background: #1f2530;
+  outline: 2px solid var(--text);
+  outline-offset: -2px;
+}
+.fl-mixer-strip.is-dimmed { opacity: 0.4; }
+
+/* Master Strip */
+.fl-master-strip {
+  background: #201e19 !important;
+  border-right: 2px solid #f59e0b44;
+}
+.fl-master-strip.is-selected {
+  outline: 2px solid #f59e0b;
+}
+.fl-master-strip .fl-track-number { color: #f59e0b; }
+
+.fl-strip-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  border-top: 3px solid var(--text);
+  padding-top: 4px;
+}
+.fl-track-number {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--muted);
+  font-family: monospace;
+}
+.fl-track-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fl-text-main);
+  max-width: 82px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Stereo Meter */
+.fl-meter-container {
+  display: flex;
+  gap: 3px;
+  height: 120px;
+  width: 28px;
+  background: #0d0f12;
+  border: 1px solid #262c36;
+  border-radius: 2px;
+  padding: 2px;
+}
+.fl-meter-scale {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 7px;
+  font-family: monospace;
+  color: #475569;
+}
+.fl-meter-bar-dual {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+  position: relative;
+  background: #14171d;
+}
+.fl-meter-ch {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.fl-meter-ch i {
+  display: block;
+  width: 100%;
+  height: 0;
+  background: linear-gradient(0deg, #22c55e 0%, #eab308 70%, #ef4444 100%);
+  transition: height 50ms linear;
+}
+.fl-clip-led {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: #331515;
+}
+.fl-clip-led.is-clipping { background: #ff0000; box-shadow: 0 0 6px #f00; }
+
+/* Knobs */
+.fl-knobs-section {
+  display: flex;
+  gap: 4px;
+}
+.fl-strip-knob {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.fl-knob-lbl {
+  font-size: 8px;
+  font-weight: bold;
+  color: var(--muted);
+}
+
+.fl-mini-range {
+  width: 32px;
+  accent-color: var(--text);
+  height: 14px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.fl-strip-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 4px;
+}
+.fl-phase-btn {
+  background: #252b35;
+  border: 1px solid #364050;
+  border-radius: 2px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: bold;
+  padding: 1px 4px;
+  cursor: pointer;
+}
+.fl-phase-btn.is-active {
+  background: #ea580c;
+  color: #fff;
+  border-color: #f97316;
+}
+.fl-strip-fx-badge {
+  font-size: 9px;
+  font-family: monospace;
+  color: var(--fl-accent-cyan);
+}
+
+/* Fader Bed */
+.fl-fader-bed {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+  height: 140px;
+}
+.fl-fader-ticks {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  font-size: 7px;
+  font-family: monospace;
+  color: #475569;
+}
+.fl-fader-track {
+  width: 20px;
+  height: 100%;
+  background: #0f1115;
+  border: 1px solid #282f3a;
+  border-radius: 3px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fl-fader-thumb {
+  transform: rotate(-90deg);
+  width: 120px;
+  accent-color: var(--muted);
+  cursor: ns-resize;
+}
+.fl-fader-readout {
+  position: absolute;
+  bottom: -16px;
+  font-size: 9px;
+  font-family: monospace;
+  color: #cbd5e1;
+}
+
+/* Switches */
+.fl-strip-switches {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+}
+.fl-led-mute {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #252e25;
+  border: 1px solid #384d38;
+  cursor: pointer;
+}
+.fl-led-mute.is-lit {
+  background: var(--fl-led-green);
+  border-color: #a7f3d0;
+  box-shadow: 0 0 6px var(--fl-led-green-glow);
+}
+.fl-solo-btn {
+  background: #252b35;
+  border: 1px solid #364050;
+  border-radius: 2px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: bold;
+  padding: 1px 5px;
+  cursor: pointer;
+}
+.fl-solo-btn.is-active {
+  background: #eab308;
+  color: #000;
+  border-color: #fde047;
+}
+
+.fl-strip-routing {
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--fl-led-green);
+}
+
+/* --------------------------------------------------------------------------
+   FL Mixer Inspector (10 FX Insert Slots)
+   -------------------------------------------------------------------------- */
+.fl-mixer-inspector {
+  background: #181b22;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px;
+  overflow-y: auto;
+  gap: 12px;
+}
+
+.fl-inspector-head {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--fl-border);
+  padding-bottom: 8px;
+}
+.fl-insp-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fl-insp-badge {
+  background: #2563eb;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.fl-insp-title strong {
+  font-size: 13px;
+  color: var(--fl-text-main);
+}
+.fl-insp-sub {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+/* 10 FX Slots */
+.fl-fx-slots-rack {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.fl-fx-slot-row {
+  display: flex;
+  align-items: center;
+  background: #1f242d;
+  border: 1px solid #2e3542;
+  border-radius: 3px;
+  padding: 2px 6px;
+  gap: 6px;
+  height: 28px;
+}
+.fl-fx-slot-row.has-plugin {
+  background: #252b36;
+  border-color: #3b4657;
+}
+.fl-fx-slot-row.is-bypassed { opacity: 0.5; }
+
+.fl-slot-num {
+  font-size: 9px;
+  font-weight: bold;
+  color: var(--muted);
+  min-width: 14px;
+}
+
+.fl-slot-led {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #262c26;
+  border: 1px solid #374737;
+  cursor: pointer;
+  padding: 0;
+}
+.fl-slot-led.is-lit {
+  background: var(--fl-led-green);
+  box-shadow: 0 0 5px var(--fl-led-green-glow);
+}
+
+.fl-slot-select-wrapper {
+  flex: 1;
+}
+.fl-slot-select {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  color: var(--fl-text-main);
+  font-size: 11px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+
+.fl-slot-edit-btn, .fl-slot-del-btn {
+  background: #2d3542;
+  border: 1px solid #3e4859;
+  border-radius: 2px;
+  color: var(--fl-text-muted);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 11px;
+}
+.fl-slot-edit-btn:hover { background: var(--text); color: #000; }
+.fl-slot-del-btn:hover { background: #ef4444; color: #fff; }
+
+/* Parametric EQ Card */
+.fl-inspector-eq-card {
+  background: #14171d;
+  border: 1px solid var(--fl-border);
+  border-radius: 4px;
+  padding: 8px;
+}
+.fl-eq-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.fl-eq-title {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+}
+.fl-eq-reset-btn {
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  font-size: 9px;
+  cursor: pointer;
+}
+.fl-mini-eq-svg {
+  width: 100%;
+  height: 50px;
+  background: #0f1115;
+  border-radius: 3px;
+}
+.fl-mini-eq-knobs {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+.fl-mini-eq-knobs label {
+  font-size: 8px;
+  font-weight: bold;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   FL Plugin Modal Window & Skins
+   -------------------------------------------------------------------------- */
+.fl-plugin-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(3px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: flFadeIn 120ms ease;
+}
+
+@keyframes flFadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.fl-plugin-window {
+  background: #20242c;
+  border: 1px solid #3c4656;
+  border-radius: 6px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  min-width: 440px;
+  max-width: 620px;
+  overflow: hidden;
+  user-select: none;
+}
+
+.fl-plugin-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(180deg, #2d3440 0%, #1e232b 100%);
+  border-bottom: 1px solid #3a4454;
+  padding: 6px 12px;
+}
+
+.fl-plugin-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fl-logo-gem {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 4px;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+.fl-plugin-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fl-text-main);
+}
+
+.fl-plugin-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.fl-plugin-routing {
+  font-size: 10px;
+  font-family: monospace;
+  color: var(--muted);
+}
+.fl-led-btn {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.fl-wet-knob {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.fl-knob-caption {
+  font-size: 8px;
+  font-weight: bold;
+  color: var(--muted);
+}
+.fl-wet-val {
+  font-size: 9px;
+  font-family: monospace;
+  color: var(--text);
+  min-width: 26px;
+}
+.fl-plugin-close {
+  background: #364050;
+  border: 0;
+  color: #cbd5e1;
+  font-size: 14px;
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fl-plugin-close:hover { background: #ef4444; color: #fff; }
+
+.fl-plugin-body {
+  padding: 16px;
+  background: #191c22;
+}
+
+/* Soundgoodizer Skin */
+.fl-soundgoodizer-chassis {
+  background: radial-gradient(circle at 50% 30%, #2a303c 0%, #15181e 100%);
+  border: 2px solid #3b4455;
+  border-radius: 6px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1), inset 0 -2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.fl-sg-logo {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: #f1f5f9;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+.fl-sg-sub {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--fl-accent-orange);
+  text-align: center;
+  margin-top: 2px;
+}
+
+.fl-sg-dial-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.fl-sg-big-knob-container {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: #0f1216;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), inset 0 2px 4px rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fl-sg-led-ring {
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  border: 4px solid #ff980033;
+  border-top-color: #ff9800;
+  box-shadow: 0 0 12px rgba(255, 152, 0, 0.4);
+}
+
+.fl-sg-dial {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #444d5c 0%, #1e2229 100%);
+  border: 2px solid #566275;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.5), inset 0 2px 2px rgba(255, 255, 255, 0.3);
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  transition: transform 50ms linear;
+}
+
+.fl-sg-dial-cap {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+.fl-sg-dial-indicator {
+  width: 4px;
+  height: 14px;
+  background: #ff9800;
+  border-radius: 2px;
+  margin: 6px auto 0;
+  box-shadow: 0 0 6px #ff9800;
+}
+
+.fl-sg-hidden-range {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.fl-sg-readout {
+  font-size: 18px;
+  font-family: monospace;
+  font-weight: 800;
+  color: #ff9800;
+}
+
+.fl-sg-modes {
+  display: flex;
+  gap: 12px;
+}
+.fl-sg-mode-btn {
+  width: 50px;
+  height: 44px;
+  background: linear-gradient(180deg, #303744 0%, #20242d 100%);
+  border: 1px solid #444e5f;
+  border-radius: 4px;
+  color: #cbd5e1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+.fl-sg-mode-btn strong { font-size: 14px; }
+.fl-sg-mode-lamp {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #39424e;
+}
+.fl-sg-mode-btn.is-active {
+  border-color: #ff9800;
+  background: linear-gradient(180deg, #3a4252 0%, #2a2e38 100%);
+  color: #fff;
+}
+.fl-sg-mode-btn.is-active .fl-sg-mode-lamp {
+  background: #ff9800;
+  box-shadow: 0 0 8px #ff9800;
+}
+
+.fl-sg-desc {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  min-height: 24px;
+}
+
+/* Parametric EQ 2 Skin */
+.fl-peq2-chassis {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.fl-peq2-screen {
+  background: #0f1217;
+  border: 1px solid #2e3746;
+  border-radius: 4px;
+  padding: 8px;
+  position: relative;
+}
+.fl-peq2-curve {
+  width: 100%;
+  height: 120px;
+}
+.fl-peq2-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8px;
+  font-family: monospace;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.fl-peq2-sliders {
+  display: flex;
+  justify-content: space-around;
+  background: #14181f;
+  border: 1px solid #28303d;
+  border-radius: 4px;
+  padding: 12px;
+}
+.fl-peq-band {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.fl-band-title {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--muted);
+}
+.fl-vert-slider {
+  transform: rotate(-90deg);
+  width: 90px;
+  margin: 32px 0;
+  cursor: ns-resize;
+}
+.fl-peq-band output {
+  font-size: 11px;
+  font-family: monospace;
+  font-weight: 700;
+  color: var(--fl-accent-cyan);
+}
+.fl-peq-band small {
+  font-size: 9px;
+  color: var(--muted);
+}
+
+.fl-peq-presets {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.fl-chip-btn {
+  background: #252b36;
+  color: #cbd5e1;
+  border: 1px solid #394354;
+  border-radius: 3px;
+  padding: 2px 8px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.fl-chip-btn:hover { background: #353e4f; }
+.fl-chip-btn.is-active { background: #0284c7; color: #fff; border-color: var(--text); }
+
+/* Reverb 2 & Delay 3 Chassis */
+.fl-reverb-faders, .fl-delay-controls, .fl-limiter-controls, .fl-dist-knobs {
+  display: flex;
+  justify-content: space-around;
+  background: #14181f;
+  border: 1px solid #28303d;
+  border-radius: 4px;
+  padding: 12px;
+}
+.fl-fader-col, .fl-param-knob {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.fl-fader-col label, .fl-param-knob label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.fl-fader-col output, .fl-param-knob output {
+  font-size: 11px;
+  font-family: monospace;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.fl-reverb-room-preview {
+  height: 60px;
+  background: #0f1217;
+  border: 1px solid #28303d;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fl-reverb-box {
+  width: 100px;
+  height: 40px;
+  border: 2px solid var(--text);
+  background: rgba(56, 189, 248, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 100ms ease;
+}
+.fl-room-label {
+  font-size: 9px;
+  font-weight: bold;
+  color: #fff;
+}
+
+/* --------------------------------------------------------------------------
+   Gross Beat Plugin UI
+   -------------------------------------------------------------------------- */
+.fl-plugin-grossbeat {
+  display: flex;
+  flex-direction: column;
+  background: #14171a;
+  border: 1px solid #283038;
+  border-radius: 6px;
+  padding: 12px;
+  gap: 12px;
+}
+
+.fl-gb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #283038;
+}
+
+.fl-gb-badge {
+  display: flex;
+  flex-direction: column;
+}
+
+.fl-gb-logo {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: #ff851b;
+}
+
+.fl-gb-sub {
+  font-size: 9px;
+  color: #8c9ba8;
+}
+
+.fl-gb-mix-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fl-gb-knob {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.fl-gb-knob label {
+  font-size: 8px;
+  font-weight: 800;
+  color: #718096;
+}
+.fl-gb-knob output {
+  font-size: 10px;
+  font-family: monospace;
+  color: #ff851b;
+}
+
+.fl-gb-matrix-surface {
+  display: flex;
+  gap: 12px;
+}
+
+.fl-gb-grid-view {
+  flex: 1.2;
+  height: 160px;
+  background: #090c0e;
+  border: 1px solid #222930;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.fl-gb-curve-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.fl-gb-slots-container {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+}
+
+.fl-gb-slots-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fl-gb-col-title {
+  font-size: 9px;
+  font-weight: 800;
+  color: #adb5bd;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.fl-gb-slots-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.fl-gb-slot-btn {
+  background: #1e242a;
+  border: 1px solid #2c353e;
+  border-radius: 3px;
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 4px 6px;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 100ms;
+}
+
+.fl-gb-slot-btn:hover {
+  background: #283038;
+  color: #fff;
+}
+
+.fl-gb-slot-btn.active {
+  background: #ff851b;
+  color: #111417;
+  border-color: #ffa149;
+  font-weight: 800;
+}
+
+/* --------------------------------------------------------------------------
+   Maximus Plugin UI
+   -------------------------------------------------------------------------- */
+.fl-plugin-maximus {
+  display: flex;
+  flex-direction: column;
+  background: #14171a;
+  border: 1px solid #283038;
+  border-radius: 6px;
+  padding: 12px;
+  gap: 12px;
+}
+
+.fl-max-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #283038;
+}
+
+.fl-max-title {
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: #ff851b;
+}
+
+.fl-max-sub {
+  font-size: 9px;
+  color: #718096;
+}
+
+.fl-max-bands-display {
+  display: flex;
+  gap: 8px;
+  height: 90px;
+  background: #090c0e;
+  border: 1px solid #20262c;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.fl-max-band {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  background: #12161a;
+  border: 1px solid #1f252b;
+  border-radius: 3px;
+  padding: 4px;
+  position: relative;
+}
+
+.fl-band-tag {
+  font-size: 8px;
+  font-weight: 800;
+  position: absolute;
+  top: 4px;
+}
+.fl-max-band.low .fl-band-tag { color: #ef4444; }
+.fl-max-band.mid .fl-band-tag { color: #eab308; }
+.fl-max-band.high .fl-band-tag { color: #38bdf8; }
+.fl-max-band.master .fl-band-tag { color: #ff851b; }
+
+.fl-band-meter {
+  width: 100%;
+  border-radius: 2px;
+  transition: height 80ms ease;
+}
+.fl-max-band.low .fl-band-meter { background: linear-gradient(to top, #7f1d1d, #ef4444); }
+.fl-max-band.mid .fl-band-meter { background: linear-gradient(to top, #78350f, #eab308); }
+.fl-max-band.high .fl-band-meter { background: linear-gradient(to top, #0369a1, #38bdf8); }
+.fl-max-band.master .fl-band-meter { background: linear-gradient(to top, #9a3412, #ff851b); }
+
+.fl-band-val {
+  font-size: 8px;
+  font-family: monospace;
+  color: #cbd5e1;
+  margin-top: 4px;
+}
+
+.fl-max-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #1a1e22;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.fl-max-knob {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.fl-max-knob label {
+  font-size: 8px;
+  font-weight: 800;
+  color: #718096;
+}
+.fl-max-knob output {
+  font-size: 9px;
+  font-family: monospace;
+  color: #ff851b;
+}
+
+/* --------------------------------------------------------------------------
+   808 Slide Notes & Ghost Channels
+   -------------------------------------------------------------------------- */
+.fl-pr-slide-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #20252b;
+  border: 1px solid #333c46;
+  border-radius: 3px;
+  padding: 3px 7px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 120ms;
+}
+
+.fl-pr-slide-btn.active {
+  background: #ff851b;
+  border-color: #ffa149;
+  color: #111417;
+  box-shadow: 0 0 6px rgba(255, 133, 27, 0.4);
+}
+
+.fl-slide-icon {
+  font-size: 11px;
+}
+
+/* Slide note indicator on piano roll note */
+.piano-wrap .grid .note.is-slide::after,
+.piano-roll-note.is-slide::after {
+  content: '◢';
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: 9px;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+/* Ghost Notes Layer */
+.fl-ghost-notes-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.fl-ghost-note {
+  position: absolute;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px dashed rgba(255, 255, 255, 0.28);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  padding-left: 3px;
+}
+
+.fl-ghost-label {
+  font-size: 8px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* --------------------------------------------------------------------------
+   Channel Sampler Settings Drawer
+   -------------------------------------------------------------------------- */
+.fl-channel-settings-drawer {
+  background: #14171a;
+  border-top: 1px solid #283038;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fl-cs-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #ff851b;
+  letter-spacing: 0.06em;
+}
+
+.fl-cs-close {
+  background: transparent;
+  border: none;
+  color: #718096;
+  font-size: 10px;
+  cursor: pointer;
+}
+.fl-cs-close:hover { color: #fff; }
+
+.fl-cs-grid {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.fl-cs-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #cbd5e1;
+  cursor: pointer;
+}
+
+.fl-cs-knob {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.fl-cs-knob label {
+  font-size: 8px;
+  font-weight: 800;
+  color: #8c9ba8;
+}
+
+.fl-cs-cut-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 9px;
+  font-weight: 800;
+  color: #8c9ba8;
+}
+
+.fl-cs-num {
+  width: 38px;
+  background: #0f1214;
+  border: 1px solid #283038;
+  border-radius: 3px;
+  color: #ff851b;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 4px;
+}
+
+.fl-ch-settings-toggle {
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 120ms;
+}
+.fl-ch-settings-toggle:hover, .fl-ch-settings-toggle.open {
+  opacity: 1;
+}
+
+.fl-rack-action-btn {
+  background: #252b31;
+  border: 1px solid #ff851b;
+  border-radius: 3px;
+  color: #ff851b;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all 120ms;
+}
+.fl-rack-action-btn:hover {
+  background: #ff851b;
+  color: #111417;
+}
+
+.fl-plugin-modal-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fl-plugin-modal-layer[hidden] {
+  display: none !important;
+}
+
+/* ==========================================================================
+   FL Studio Playlist Picker Panel
+   ========================================================================== */
+.fl-picker-panel {
+  width: 136px;
+  min-width: 124px;
+  background: #111417;
+  border-right: 1px solid #1f252d;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  user-select: none;
+}
+.fl-picker-header {
+  padding: 4px 6px;
+  background: #14181d;
+  border-bottom: 1px solid #1f252d;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3px;
+}
+.fl-picker-tabs {
+  display: flex;
+  gap: 2px;
+}
+.fl-picker-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #728192;
+  font-size: 8.5px;
+  font-weight: 700;
+  padding: 2px 4px;
+  border-radius: 2px;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+}
+.fl-picker-tab:hover {
+  color: #d1d9e2;
+  background: rgba(255, 255, 255, 0.04);
+}
+.fl-picker-tab.active {
+  background: #1e2630;
+  border-color: #2b3644;
+  color: #f1f5f9;
+}
+.fl-picker-add-btn {
+  background: #182028;
+  border: 1px solid #2b3644;
+  color: #94a3b8;
+  font-size: 8px;
+  font-weight: 800;
+  padding: 2px 4px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.fl-picker-add-btn:hover {
+  background: #242f3d;
+  color: #fff;
+  border-color: #3b82f6;
+}
+.fl-picker-search {
+  padding: 3px 5px;
+  background: #0e1114;
+  border-bottom: 1px solid #1c2228;
+}
+.fl-picker-input {
+  width: 100%;
+  background: #15191e;
+  border: 1px solid #242c35;
+  border-radius: 2px;
+  color: #cbd5e1;
+  font-size: 9px;
+  padding: 2px 5px;
+  height: 20px;
+  outline: none;
+}
+.fl-picker-input:focus {
+  border-color: #3b82f6;
+}
+.fl-picker-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fl-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 5px;
+  background: #13171b;
+  border: 1px solid #1c2228;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 10px;
+  color: #94a3b8;
+  height: 22px;
+  box-sizing: border-box;
+  transition: all 0.08s ease;
+}
+.fl-picker-item:hover {
+  background: #1b2128;
+  border-color: #2b3542;
+  color: #e2e8f0;
+}
+.fl-picker-item.selected {
+  background: #1e293b;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+.fl-picker-color-tag {
+  width: 3px;
+  height: 10px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+.fl-picker-item-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+.fl-picker-bars {
+  font-size: 8px;
+  color: #556272;
+  font-family: ui-monospace, monospace;
+}
+.fl-picker-empty {
+  padding: 10px 4px;
+  text-align: center;
+  font-size: 9px;
+  color: #526070;
+}
+.fl-picker-footer {
+  padding: 3px 4px;
+  background: #14181d;
+  border-top: 1px solid #1f252d;
+  display: flex;
+  gap: 3px;
+}
+.fl-picker-action-btn {
+  flex: 1;
+  background: #182028;
+  border: 1px solid #28323e;
+  color: #7b8b9c;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 2px 1px;
+  border-radius: 2px;
+  cursor: pointer;
+  height: 19px;
+  line-height: 1;
+}
+.fl-picker-action-btn:hover {
+  background: #253140;
+  border-color: #3b82f6;
+  color: #fff;
+}
+
+/* ==========================================================================
+   FL Studio Automation Clip View
+   ========================================================================== */
+.fl-auto-clip-view {
+  background: #121518;
+  border: 1px solid #ff851b;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  margin: 3px 0;
+  user-select: none;
+}
+.fl-auto-clip-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #1a1e23;
+  padding: 3px 8px;
+  border-bottom: 1px solid #2a333d;
+}
+.fl-auto-badge {
+  background: #ff851b;
+  color: #111;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+.fl-auto-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #e2e8f0;
+  flex: 1;
+}
+.fl-auto-bars {
+  font-size: 9px;
+  color: #8892b0;
+  font-family: ui-monospace, monospace;
+}
+.fl-auto-svg-wrap {
+  position: relative;
+  width: 100%;
+  height: 64px;
+}
+.fl-auto-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.fl-auto-node {
+  fill: #fff;
+  stroke: #ff851b;
+  stroke-width: 2;
+  cursor: grab;
+  transition: r 100ms;
+}
+.fl-auto-node:hover {
+  r: 6.5;
+}
+.fl-tension-handle {
+  fill: #ff851b;
+  stroke: #111;
+  stroke-width: 1.5;
+  cursor: ns-resize;
+  opacity: 0.85;
+}
+.fl-tension-handle:hover {
+  opacity: 1;
+  r: 4.5;
+}
+
+/* ==========================================================================
+   FL Studio QWERTY Typing Keyboard Strip
+   ========================================================================== */
+.fl-typing-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #161a1e;
+  border: 1px solid #2d353d;
+  padding: 2px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  user-select: none;
+}
+.fl-typing-strip.active {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+}
+.fl-typing-badge {
+  background: #2d353d;
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+.fl-typing-strip.active .fl-typing-badge {
+  background: #22c55e;
+  color: #0b140e;
+}
+.fl-typing-octave {
+  font-size: 10px;
+  font-weight: 700;
+  color: #cbd5e1;
+  font-family: ui-monospace, monospace;
+}
+.fl-typing-keys-hint {
+  display: flex;
+  gap: 6px;
+  font-size: 9px;
+  color: #64748b;
+}
+
+/* ==========================================================================
+   FL Studio 3xOSC Synthesizer
+   ========================================================================== */
+.fl-3xosc-window {
+  background: #20242a;
+  border: 1px solid #3c4656;
+  border-radius: 6px;
+  min-width: 520px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.75);
+  overflow: hidden;
+  user-select: none;
+}
+.fl-3x-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.fl-3x-oscillators {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fl-3x-osc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #181b20;
+  border: 1px solid #282f38;
+  padding: 6px 10px;
+  border-radius: 4px;
+}
+.fl-3x-osc-title {
+  width: 50px;
+}
+.fl-osc-badge {
+  background: #ff851b;
+  color: #111;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 5px;
+  border-radius: 2px;
+}
+.fl-3x-shapes {
+  display: flex;
+  gap: 2px;
+  background: #111316;
+  padding: 2px;
+  border-radius: 3px;
+}
+.fl-shape-btn {
+  background: transparent;
+  border: none;
+  color: #718096;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 4px 6px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.fl-shape-btn.active {
+  background: #ff851b;
+  color: #111;
+}
+.fl-3x-param {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 60px;
+}
+.fl-3x-param label {
+  font-size: 8px;
+  font-weight: 700;
+  color: #8c9ba8;
+}
+.fl-3x-val {
+  font-size: 9px;
+  color: #cbd5e1;
+  font-family: ui-monospace, monospace;
+}
+.fl-3x-filter-strip {
+  background: #181b20;
+  border: 1px solid #282f38;
+  border-radius: 4px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.fl-3x-filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+/* ==========================================================================
+   FL Studio Sampler ADSR Envelopes
+   ========================================================================== */
+.fl-adsr-panel {
+  background: #14171a;
+  border: 1px solid #283038;
+  border-radius: 4px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fl-adsr-graph {
+  background: #0d0f12;
+  border: 1px solid #1e242a;
+  border-radius: 3px;
+  height: 64px;
+  overflow: hidden;
+}
+.fl-adsr-graph svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.fl-adsr-knobs-row {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+.fl-adsr-knob {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.fl-adsr-knob label {
+  font-size: 8px;
+  font-weight: 800;
+  color: #8c9ba8;
+}
+.fl-adsr-knob span {
+  font-size: 9px;
+  color: #cbd5e1;
+  font-family: ui-monospace, monospace;
+}
+
+/* ==========================================================================
+   FL Studio "Edison" Mini Waveform Editor
+   ========================================================================== */
+.fl-edison-window {
+  background: #1e2329;
+  border: 1px solid #3c4656;
+  border-radius: 6px;
+  min-width: 580px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.75);
+  overflow: hidden;
+  user-select: none;
+}
+.fl-edison-toolbar {
+  padding: 6px 10px;
+  background: #161a20;
+  border-bottom: 1px solid #283038;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.fl-ed-btn {
+  background: #252b31;
+  border: 1px solid #3c4656;
+  color: #cbd5e1;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.fl-ed-btn:hover {
+  background: #3c4656;
+  color: #fff;
+}
+.fl-ed-btn.active {
+  background: #ff851b;
+  border-color: #ff851b;
+  color: #111;
+}
+.fl-ed-btn.hot {
+  background: #ff851b;
+  border-color: #ff851b;
+  color: #111;
+}
+.fl-edison-canvas-wrap {
+  position: relative;
+  background: #0d0f12;
+  border-bottom: 1px solid #283038;
+  height: 140px;
+}
+.fl-edison-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.fl-ed-trim-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.fl-ed-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  pointer-events: auto;
+  cursor: ew-resize;
+}
+.fl-ed-marker.start {
+  background: #22c55e;
+}
+.fl-ed-marker.end {
+  background: #ef4444;
+}
+.fl-ed-marker-flag {
+  position: absolute;
+  top: 0;
+  font-size: 8px;
+  font-weight: 900;
+  padding: 1px 4px;
+  border-radius: 0 0 3px 0;
+}
+.fl-ed-marker.start .fl-ed-marker-flag {
+  background: #22c55e;
+  color: #0b140e;
+  left: 0;
+}
+.fl-ed-marker.end .fl-ed-marker-flag {
+  background: #ef4444;
+  color: #fff;
+  right: 0;
+}
+.fl-edison-footer {
+  padding: 6px 12px;
+  background: #14171a;
+  display: flex;
+  gap: 24px;
+}
+.fl-ed-stat {
+  display: flex;
+  gap: 6px;
+  font-size: 10px;
+}
+.fl-ed-stat label {
+  color: #718096;
+  font-weight: 700;
+}
+.fl-ed-stat span {
+  color: #e2e8f0;
+  font-family: ui-monospace, monospace;
+}
+
+/* ==========================================================================
+   FL Playlist Arrangement Wrap & Routing Cables
+   ========================================================================== */
+.fl-playlist-arrangement-wrap {
+  display: flex;
+  flex-direction: row;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1px solid #283038;
+  background: #181d22;
+}
+
+.fl-playlist-arrangement-wrap .fl-picker-panel {
+  flex: 0 0 136px;
+  min-width: 124px;
+  max-width: 150px;
+  height: 100%;
+}
+
+.fl-playlist-arrangement-wrap .playlist-board {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  border-radius: 0;
+}
+
+@media (max-width: 768px) {
+  .fl-playlist-arrangement-wrap .fl-picker-panel {
+    display: none;
+  }
+}
+
+/* Mixer Sidechain Routing Cables */
+.fl-routing-cable-anchor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 4px 2px 2px;
+  border-top: 1px solid #20262c;
+  background: #101316;
+  min-height: 38px;
+}
+
+.fl-cable-source {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #ff851b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fl-cable-source .fl-cable-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff851b;
+}
+
+.fl-cable-toggle {
+  background: #1a2026;
+  border: 1px solid #2d3844;
+  border-radius: 3px;
+  padding: 2px 4px;
+  cursor: pointer;
+  color: #718096;
+  font-size: 8px;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+.fl-cable-toggle.active {
+  background: #ff851b;
+  border-color: #ff9d3b;
+  color: #101418;
+  box-shadow: 0 0 6px rgba(255, 133, 27, 0.4);
+}
+
+.fl-send-level {
+  width: 32px !important;
+  height: 12px;
+}
+
+/* ==========================================================================
+   FL Studio Tree Browser
+   ========================================================================== */
+.fl-browser-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #14171a;
+  color: #c9d1d9;
+  user-select: none;
+  font-family: inherit;
+}
+
+.fl-browser-search-wrap {
+  padding: 6px 8px;
+  background: #181d22;
+  border-bottom: 1px solid #283038;
+}
+
+.fl-browser-search-input {
+  width: 100%;
+  background: #101215;
+  border: 1px solid #2d353d;
+  border-radius: 3px;
+  color: #d1d5db;
+  font-size: 10px;
+  padding: 4px 6px;
+}
+
+.fl-browser-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.fl-browser-category {
+  margin-bottom: 6px;
+}
+
+.fl-browser-cat-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: #1c2228;
+  border-radius: 3px;
+  cursor: pointer;
+  border-left: 2px solid #ff851b;
+}
+
+.fl-browser-cat-badge {
+  font-size: 8px;
+  font-weight: 900;
+  background: #2a333c;
+  color: #ff851b;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.fl-browser-cat-title {
+  font-size: 11px;
+  color: #e2e8f0;
+}
+
+.fl-browser-category.collapsed .fl-browser-items-list {
+  display: none;
+}
+
+.fl-browser-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 0 2px 14px;
+}
+
+.fl-browser-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 10px;
+  color: #94a3b8;
+  transition: all 0.1s ease;
+}
+
+.fl-browser-item:hover {
+  background: #232a32;
+  color: #f8fafc;
+}
+
+.fl-browser-item-type {
+  font-size: 7px;
+  font-weight: 800;
+  padding: 1px 3px;
+  border-radius: 2px;
+  background: #1e252c;
+  color: #8b9bb4;
+}
+
+.fl-browser-preview-bar {
+  padding: 6px 8px;
+  background: #101316;
+  border-top: 1px solid #283038;
+}
+
+.fl-browser-preview-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.fl-browser-preview-tag {
+  font-size: 8px;
+  font-weight: 800;
+  color: #ff851b;
+}
+
+.fl-browser-preview-name {
+  font-size: 9px;
+  color: #718096;
+}
+
+.fl-browser-canvas {
+  width: 100%;
+  height: 34px;
+  background: #0d1012;
+  border: 1px solid #20262c;
+  border-radius: 2px;
+  display: block;
+}
+
+/* ==========================================================================
+   FL Studio Shell & Root Layout Overrides
+   ========================================================================== */
+
+.shell {
+  position: relative !important;
+  height: 100vh !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  background: var(--bg, #0c0c0c) !important;
+  grid-template-columns: none !important;
+  grid-template-rows: none !important;
+  grid-template-areas: none !important;
+}
+
+#fl-top-panel-host {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  z-index: 30 !important;
+}
+
+.shell > .topbar,
+.shell > .transport {
+  display: none !important;
+}
+
+.workspace {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  overflow: hidden !important;
+  width: 100% !important;
+}
+
+.workspace > .tools {
+  flex: 0 0 170px !important;
+  min-width: 170px !important;
+  max-width: 170px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow-y: auto !important;
+  border-right: 1px solid var(--line, #3a3a3a) !important;
+  background: rgba(18, 21, 26, 0.95) !important;
+  z-index: 10 !important;
+  padding: 16px 10px !important;
+}
+
+.shell.studio-view-active .workspace > .tools,
+.shell.studio-view-active #nav-toggle {
+  display: none !important;
+}
+
+.workspace > .main-stage {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  background: var(--bg, #0c0c0c) !important;
+}
+
+.shell.studio-view-active .workspace > .main-stage {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.shell:not(.studio-view-active) .workspace > .main-stage {
+  padding: 20px 28px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.workspace > .inspector {
+  flex: 0 0 236px !important;
+  min-width: 236px !important;
+  max-width: 236px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow-y: auto !important;
+  border-left: 1px solid var(--line, #3a3a3a) !important;
+  background: rgba(20, 24, 28, 0.95) !important;
+}
+
+.shell.studio-view-active .workspace > .inspector,
+.shell.inspector-closed .workspace > .inspector {
+  display: none !important;
+}
+
+.shell > .piano-section {
+  flex: 0 0 260px !important;
+  min-height: 180px !important;
+  max-height: 42vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  border-top: 1px solid var(--line, #3a3a3a) !important;
+  background: #14171c !important;
+  z-index: 15 !important;
+}
+
+.shell > .piano-section[hidden],
+.shell.studio-view-active > .piano-section {
+  display: none !important;
+}
+
+.shell > footer {
+  flex: 0 0 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border-top: 1px solid var(--line, #3a3a3a) !important;
+  padding: 0 16px !important;
+  font-size: 11px !important;
+  background: #111417 !important;
+  color: var(--muted, #a3a3a3) !important;
+  z-index: 10 !important;
+}
+
+.shell.studio-view-active > footer {
+  display: none !important;
+}
+
+/* ==========================================================================
+   Studio Center & Arrangement Flex Sizing
+   ========================================================================== */
+
+.studio-center {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.studio-center .fl-playlist-arrangement-wrap {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+.fl-playlist-arrangement-wrap .playlist-board {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* ==========================================================================
+   FL Studio Top Control Panel & Hint Bar Styles
+   ========================================================================== */
+
+.fl-top-control-panel {
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #1f252d 0%, #151a20 100%);
+  border-bottom: 1px solid #2d3540;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  user-select: none;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  width: 100%;
+}
+
+.fl-header-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 26px;
+  padding: 0 8px;
+  background: #13171c;
+  border-bottom: 1px solid #1f252d;
+  gap: 8px;
+}
+
+.fl-logo-and-menus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fl-brand-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  padding: 1px 5px;
+  border-radius: 2px;
+  transition: background 0.12s ease;
+}
+
+.fl-brand-badge:hover {
+  background: #1e2630;
+}
+
+.fl-brand-text {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #e2e8f0;
+}
+
+.fl-menu-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.fl-menu-item {
+  position: relative;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.03em;
+}
+
+.fl-menu-item:hover,
+.fl-menu-item:focus-within {
+  background: #1e2732;
+  color: #ffffff;
+}
+
+.fl-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 190px;
+  background: #141920;
+  border: 1px solid #2a3442;
+  border-radius: 3px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  padding: 3px 0;
+  margin-top: 2px;
+}
+
+.fl-menu-item:hover .fl-dropdown-menu,
+.fl-menu-item:focus-within .fl-dropdown-menu {
+  display: block;
+}
+
+.fl-dropdown-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 4px 10px;
+  background: none;
+  border: none;
+  color: #cbd5e1;
+  font-size: 10.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fl-dropdown-btn:hover {
+  background: #1e293b;
+  color: #38bdf8;
+}
+
+.fl-dropdown-shortcut {
+  font-size: 8.5px;
+  color: #64748b;
+  font-family: var(--mono, monospace);
+  margin-left: 10px;
+}
+
+.fl-project-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fl-project-title {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #e2e8f0;
+  font-family: var(--mono, monospace);
+}
+
+.fl-save-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 5px #22c55e;
+}
+
+.fl-header-sys-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fl-sys-meter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 8.5px;
+  font-family: var(--mono, monospace);
+  color: #64748b;
+}
+
+.fl-meter-bar-track {
+  width: 32px;
+  height: 5px;
+  background: #0d1013;
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid #1e252e;
+}
+
+.fl-meter-bar-fill {
+  height: 100%;
+}
+
+.fl-meter-bar-fill.cpu {
+  background: #38bdf8;
+}
+
+.fl-meter-bar-fill.mem {
+  background: #818cf8;
+}
+
+.fl-header-row-bottom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 8px;
+  background: #171b22;
+  border-bottom: 1px solid #202630;
+  overflow-x: auto;
+}
+
+.fl-pat-song-toggle {
+  display: flex;
+  border: 1px solid #27313e;
+  border-radius: 2px;
+  overflow: hidden;
+  background: #0f1216;
+}
+
+.fl-pat-song-toggle button {
+  font-size: 8.5px;
+  font-weight: 800;
+  padding: 3px 6px;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+}
+
+.fl-pat-song-toggle button.active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.fl-transport-buttons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.fl-btn-play,
+.fl-btn-stop,
+.fl-btn-record {
+  width: 25px;
+  height: 23px;
+  border-radius: 2px;
+  border: 1px solid #2f3a47;
+  background: linear-gradient(180deg, #242c37 0%, #192027 100%);
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.fl-btn-play:hover,
+.fl-btn-stop:hover,
+.fl-btn-record:hover {
+  background: #2d3744;
+}
+
+.fl-btn-play.playing {
+  background: #16a34a;
+  color: #fff;
+  border-color: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+}
+
+.fl-rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+}
+
+.fl-lcd-box {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #0c0f12;
+  border: 1px solid #212933;
+  border-radius: 3px;
+  padding: 1px 6px;
+  height: 24px;
+}
+
+.fl-lcd-label {
+  font-size: 7.5px;
+  font-weight: 800;
+  color: #526071;
+  font-family: var(--mono, monospace);
+}
+
+.fl-lcd-num {
+  font-family: var(--mono, monospace);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #38bdf8;
+  letter-spacing: 0.04em;
+}
+
+.fl-lcd-readout.lcd-green .fl-lcd-num {
+  color: #4ade80;
+}
+
+.fl-lcd-spinners {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+}
+
+.fl-lcd-spin-up,
+.fl-lcd-spin-down {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 6.5px;
+  padding: 0 1px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.fl-lcd-spin-up:hover,
+.fl-lcd-spin-down:hover {
+  color: #38bdf8;
+}
+
+.fl-tap-tempo-btn {
+  background: #1a222a;
+  border: 1px solid #2e3947;
+  border-radius: 2px;
+  font-size: 7.5px;
+  font-weight: 800;
+  color: #94a3b8;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.fl-tap-tempo-btn:hover {
+  background: #253140;
+  color: #fff;
+}
+
+.fl-lcd-sub {
+  font-size: 7.5px;
+  color: #526071;
+  font-family: var(--mono, monospace);
+}
+
+.fl-tool-switches {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.fl-switch-btn {
+  background: #1a2128;
+  border: 1px solid #28333f;
+  border-radius: 2px;
+  padding: 3px 5px;
+  font-size: 7.5px;
+  font-weight: 800;
+  color: #6b7c8f;
+  cursor: pointer;
+}
+
+.fl-switch-btn:hover {
+  background: #242d38;
+  color: #cbd5e1;
+}
+
+.fl-switch-btn.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #60a5fa;
+  font-weight: 900;
+}
+
+.fl-oscilloscope-container {
+  background: #090c0e;
+  border: 1px solid #1f2731;
+  border-radius: 2px;
+  padding: 1px;
+  display: flex;
+  align-items: center;
+}
+
+.fl-scope-glass {
+  line-height: 0;
+}
+
+.fl-scope-canvas {
+  display: block;
+  width: 120px;
+  height: 22px;
+}
+
+.fl-window-shortcuts {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.fl-win-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 2px;
+  background: #1a2027;
+  border: 1px solid #2a3441;
+  color: #7d8d9f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.fl-win-btn:hover {
+  background: #242c36;
+  color: #f1f5f9;
+}
+
+.fl-win-btn.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #60a5fa;
+}
+
+.fl-hint-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 18px;
+  padding: 0 8px;
+  background: #0e1115;
+  border-bottom: 1px solid #1b2027;
+  font-size: 8.5px;
+  font-family: var(--mono, monospace);
+  color: #64748b;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fl-hint-icon {
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+}
+
+.fl-hint-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #8fa0b3;
+}
+
+.fl-hint-value {
+  color: #38bdf8;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+/* --------------------------------------------------------------------------
+   FL Score Tools Modal (Strummer, Chopper, Randomizer, Flam)
+   -------------------------------------------------------------------------- */
+.fl-score-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+}
+
+.fl-score-dialog {
+  width: 390px;
+  background: #14171d;
+  border: 1px solid #2d3748;
+  border-radius: 6px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.fl-score-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #181d24;
+  border-bottom: 1px solid #232a35;
+}
+
+.fl-score-badge {
+  font-size: 8.5px;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 2px;
+  background: #f59e0b;
+  color: #000;
+  font-family: monospace;
+}
+
+.fl-score-dialog-header strong {
+  flex: 1;
+  font-size: 11.5px;
+  color: #f1f5f9;
+}
+
+.fl-score-close {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.fl-score-close:hover {
+  background: #242c36;
+  color: #fff;
+}
+
+.fl-score-dialog-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fl-score-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fl-score-row label {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  justify-content: space-between;
+}
+
+.fl-score-btn-group {
+  display: flex;
+  gap: 4px;
+}
+
+.fl-score-opt {
+  flex: 1;
+  padding: 5px 6px;
+  font-size: 9.5px;
+  font-weight: 700;
+  background: #1c222b;
+  border: 1px solid #2b3644;
+  color: #94a3b8;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.fl-score-opt:hover {
+  background: #232a35;
+  color: #f1f5f9;
+}
+
+.fl-score-opt.active {
+  background: #2563eb;
+  border-color: #60a5fa;
+  color: #ffffff;
+}
+
+.fl-score-slider {
+  accent-color: #38bdf8;
+  height: 4px;
+  background: #222b35;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.fl-score-row.checkbox {
+  flex-direction: row;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.fl-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: #cbd5e1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.fl-score-dialog-footer {
+  padding: 8px 12px;
+  background: #101317;
+  border-top: 1px solid #1f2631;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.fl-score-btn {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.fl-score-btn.cancel {
+  background: #1e242c;
+  border: 1px solid #2d3748;
+  color: #94a3b8;
+}
+
+.fl-score-btn.cancel:hover {
+  background: #28313d;
+  color: #fff;
+}
+
+.fl-score-btn.apply {
+  background: #2563eb;
+  border: 1px solid #60a5fa;
+  color: #fff;
+}
+
+.fl-score-btn.apply:hover {
+  background: #1d4ed8;
+}
+
+/* --------------------------------------------------------------------------
+   FL Export Dialog (Commercial Render Window)
+   -------------------------------------------------------------------------- */
+.fl-export-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+}
+
+.fl-export-dialog {
+  width: 480px;
+  background: #13161c;
+  border: 1px solid #2d3848;
+  border-radius: 6px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.fl-export-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #181c23;
+  border-bottom: 1px solid #232a35;
+}
+
+.fl-export-badge {
+  font-size: 8.5px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: #ef4444;
+  color: #fff;
+  font-family: monospace;
+}
+
+.fl-export-header strong {
+  flex: 1;
+  font-size: 11.5px;
+  color: #f1f5f9;
+}
+
+.fl-export-close {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.fl-export-close:hover {
+  background: #242c36;
+  color: #fff;
+}
+
+.fl-export-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+.fl-export-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fl-export-sec-label {
+  font-size: 9px;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 0.08em;
+}
+
+.fl-export-btn-group {
+  display: flex;
+  gap: 4px;
+}
+
+.fl-exp-mode-btn,
+.fl-exp-tail-btn {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 9.5px;
+  font-weight: 700;
+  background: #1b212a;
+  border: 1px solid #2b3644;
+  color: #94a3b8;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.fl-exp-mode-btn:hover,
+.fl-exp-tail-btn:hover {
+  background: #232b36;
+  color: #f1f5f9;
+}
+
+.fl-exp-mode-btn.active,
+.fl-exp-tail-btn.active {
+  background: #2563eb;
+  border-color: #60a5fa;
+  color: #ffffff;
+}
+
+.fl-export-format-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.fl-exp-radio-card {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  background: #161b22;
+  border: 1px solid #242c38;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.fl-exp-radio-card:hover {
+  border-color: #3b4b5e;
+}
+
+.fl-exp-radio-card.selected {
+  border-color: #38bdf8;
+  background: #1a2536;
+}
+
+.fl-exp-radio-card input[type="radio"] {
+  display: none;
+}
+
+.fl-exp-card-title {
+  font-size: 10px;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.fl-exp-card-sub {
+  font-size: 8.5px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.fl-export-checkbox-row {
+  margin-top: 2px;
+}
+
+.fl-export-footer {
+  padding: 8px 14px;
+  background: #0f1216;
+  border-top: 1px solid #1c222a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fl-export-meta {
+  font-size: 9.5px;
+  color: #64748b;
+  display: flex;
+  gap: 12px;
+  font-family: monospace;
+}
+
+.fl-export-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.fl-exp-btn {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.fl-exp-btn.cancel {
+  background: #1e242c;
+  border: 1px solid #2d3748;
+  color: #94a3b8;
+}
+
+.fl-exp-btn.cancel:hover {
+  background: #28313d;
+  color: #fff;
+}
+
+.fl-exp-btn.start {
+  background: #10b981;
+  border: 1px solid #34d399;
+  color: #022c22;
+}
+
+.fl-exp-btn.start:hover {
+  background: #059669;
+  color: #fff;
+}
+
+/* --------------------------------------------------------------------------
+   FL Timeline Markers (Alt+T)
+   -------------------------------------------------------------------------- */
+.fl-timeline-markers-track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 18px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.fl-timeline-marker {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  user-select: none;
+}
+
+.fl-marker-flag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-size: 8px;
+  font-weight: 800;
+  color: #000;
+  font-family: monospace;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  transition: transform 0.1s ease;
+}
+
+.fl-marker-flag:hover {
+  transform: scale(1.1);
+}
+
+.fl-marker-line {
+  width: 0;
+  height: 600px;
+  border-left: 1px dashed;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   FL Plugins: WaveShaper, Blood Overdrive & PEQ2 7-Band
+   -------------------------------------------------------------------------- */
+.fl-plugin-waveshaper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fl-ws-screen {
+  background: #0b0e12;
+  border: 1px solid #1c242f;
+  border-radius: 4px;
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.fl-ws-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.fl-ws-modes {
+  display: flex;
+  gap: 4px;
+}
+
+.fl-ws-mode-btn {
+  flex: 1;
+  padding: 4px 6px;
+  font-size: 9px;
+  font-weight: 700;
+  background: #161a20;
+  border: 1px solid #242c38;
+  color: #94a3b8;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.fl-ws-mode-btn:hover {
+  background: #202732;
+  color: #f1f5f9;
+}
+
+.fl-ws-mode-btn.active {
+  background: #38bdf8;
+  color: #000000;
+  border-color: #7dd3fc;
+}
+
+.fl-ws-controls {
+  display: flex;
+  justify-content: space-around;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.fl-plugin-blood {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px;
+}
+
+.fl-blood-badge {
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #f43f5e;
+  letter-spacing: 0.1em;
+  text-align: center;
+  font-family: monospace;
+  padding: 2px 0;
+  border-bottom: 1px solid #281920;
+}
+
+.fl-blood-controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fl-plugin-peq2 {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fl-peq-screen {
+  background: #0b0e13;
+  border: 1px solid #1e2632;
+  border-radius: 4px;
+  height: 130px;
+  position: relative;
+}
+
+.fl-peq-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.fl-peq-bands-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 6px 4px;
+  background: #12161d;
+  border-radius: 4px;
+  border: 1px solid #1c232e;
+}
+
+.fl-peq-band-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.fl-peq-band-badge {
+  font-size: 8px;
+  font-weight: 800;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+}
+
+.fl-peq-freq {
+  font-size: 7.5px;
+  color: #64748b;
+  font-family: monospace;
+}
+
+.fl-peq-fader {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 14px;
+  height: 60px;
+  accent-color: #38bdf8;
+  cursor: pointer;
+}
+
+.fl-peq-out {
+  font-size: 8px;
+  font-weight: 700;
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+/* --------------------------------------------------------------------------
+   FL Master Pitch Box
+   -------------------------------------------------------------------------- */
+.fl-pitch-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #111419;
+  border: 1px solid #202732;
+  border-radius: 4px;
+  padding: 2px 8px;
+  height: 28px;
+}
+
+.fl-pitch-label {
+  font-size: 8px;
+  font-weight: 800;
+  color: #64748b;
+  font-family: monospace;
+  letter-spacing: 0.05em;
+}
+
+.fl-pitch-slider {
+  width: 54px;
+  height: 4px;
+  accent-color: #38bdf8;
+  background: #1e2632;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.fl-pitch-reset {
+  background: #1c232e;
+  border: 1px solid #283442;
+  color: #38bdf8;
+  font-size: 9px;
+  font-weight: 800;
+  font-family: monospace;
+  border-radius: 2px;
+  padding: 1px 5px;
+  cursor: pointer;
+  min-width: 24px;
+  text-align: center;
+}
+
+.fl-pitch-reset:hover {
+  background: #2563eb;
+  color: #fff;
+  border-color: #60a5fa;
+}
+
+/* --------------------------------------------------------------------------
+   FL F2 Rename & Color Palette Modal
+   -------------------------------------------------------------------------- */
+.fl-rc-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1060;
+}
+
+.fl-rc-dialog {
+  width: 320px;
+  background: #14171d;
+  border: 1px solid #2d3848;
+  border-radius: 6px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.fl-rc-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #181d24;
+  border-bottom: 1px solid #232a35;
+}
+
+.fl-rc-badge {
+  font-size: 8px;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 2px;
+  background: #38bdf8;
+  color: #000;
+  font-family: monospace;
+}
+
+.fl-rc-header strong {
+  flex: 1;
+  font-size: 11px;
+  color: #f1f5f9;
+}
+
+.fl-rc-close {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.fl-rc-close:hover {
+  background: #242c36;
+  color: #fff;
+}
+
+.fl-rc-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fl-rc-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fl-rc-row label {
+  font-size: 9px;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 0.05em;
+}
+
+.fl-rc-input {
+  background: #0f1216;
+  border: 1px solid #263140;
+  border-radius: 3px;
+  padding: 6px 8px;
+  font-size: 11px;
+  color: #f1f5f9;
+  outline: none;
+}
+
+.fl-rc-input:focus {
+  border-color: #38bdf8;
+}
+
+.fl-rc-palette {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+  padding: 6px;
+  background: #0f1216;
+  border: 1px solid #202732;
+  border-radius: 4px;
+}
+
+.fl-color-swatch {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.1s ease;
+  padding: 0;
+}
+
+.fl-color-swatch:hover {
+  transform: scale(1.15);
+}
+
+.fl-color-swatch.active {
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
+  transform: scale(1.1);
+}
+
+.fl-rc-footer {
+  padding: 8px 12px;
+  background: #101317;
+  border-top: 1px solid #1f2631;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.fl-rc-btn {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.fl-rc-btn.cancel {
+  background: #1e242c;
+  border: 1px solid #2d3748;
+  color: #94a3b8;
+}
+
+.fl-rc-btn.cancel:hover {
+  background: #28313d;
+  color: #fff;
+}
+
+.fl-rc-btn.apply {
+  background: #2563eb;
+  border: 1px solid #60a5fa;
+  color: #fff;
+}
+
+.fl-rc-btn.apply:hover {
+  background: #1d4ed8;
+}
+
+/* --------------------------------------------------------------------------
+   FL F11 Project Info & Time Tracker Modal
+   -------------------------------------------------------------------------- */
+.fl-info-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1060;
+}
+
+.fl-info-dialog {
+  width: 440px;
+  background: #13161c;
+  border: 1px solid #2b3646;
+  border-radius: 6px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.fl-info-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #181d24;
+  border-bottom: 1px solid #232a35;
+}
+
+.fl-info-badge {
+  font-size: 8px;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 2px;
+  background: #a855f7;
+  color: #fff;
+  font-family: monospace;
+}
+
+.fl-info-header strong {
+  flex: 1;
+  font-size: 11px;
+  color: #f1f5f9;
+}
+
+.fl-info-close {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.fl-info-close:hover {
+  background: #242c36;
+  color: #fff;
+}
+
+.fl-info-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fl-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.fl-info-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fl-info-field label {
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 0.05em;
+}
+
+.fl-info-input {
+  background: #0f1216;
+  border: 1px solid #25303e;
+  border-radius: 3px;
+  padding: 5px 8px;
+  font-size: 10.5px;
+  color: #f1f5f9;
+  outline: none;
+}
+
+.fl-info-input:focus {
+  border-color: #a855f7;
+}
+
+.fl-info-timer {
+  background: #090c10;
+  border: 1px solid #1c2430;
+  border-radius: 3px;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #38bdf8;
+  font-family: monospace;
+}
+
+.fl-info-textarea {
+  background: #0f1216;
+  border: 1px solid #25303e;
+  border-radius: 3px;
+  padding: 6px 8px;
+  font-size: 10px;
+  color: #f1f5f9;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+}
+
+.fl-info-textarea:focus {
+  border-color: #a855f7;
+}
+
+.fl-info-footer {
+  padding: 8px 12px;
+  background: #101317;
+  border-top: 1px solid #1f2631;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.fl-info-btn {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.fl-info-btn.cancel {
+  background: #1e242c;
+  border: 1px solid #2d3748;
+  color: #94a3b8;
+}
+
+.fl-info-btn.cancel:hover {
+  background: #28313d;
+  color: #fff;
+}
+
+.fl-info-btn.apply {
+  background: #8b5cf6;
+  border: 1px solid #a78bfa;
+  color: #fff;
+}
+
+.fl-info-btn.apply:hover {
+  background: #7c3aed;
+}
+
+
+
+
