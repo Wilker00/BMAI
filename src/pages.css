@@ -428,7 +428,7 @@ button.sketch-lane em{font-style:normal;font-size:10px;letter-spacing:.08em;text
 .page-kits{min-width:0}
 
 .round,.stop,.icon-btn,.metronome,.nav-toggle,#close-library,#close-inspector{display:grid;place-items:center}
-.ico{font-family:'Material Symbols Outlined';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;white-space:nowrap;display:inline-block;flex:none;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20;font-size:18px;color:inherit;-webkit-font-smoothing:antialiased}
+.ico{display:inline-block;flex:none;color:inherit;vertical-align:-3px}
 .library,.nav-link,.settings,.back-project,.outline-btn,.lane-label-btn,.ghost{display:flex;align-items:center;gap:8px}
 .tool .ico{justify-self:center;font-size:18px;color:#a0a0a0}
 .tool.active .ico{color:#e6e6e6}
@@ -440,11 +440,11 @@ button.sketch-lane em{font-style:normal;font-size:10px;letter-spacing:.08em;text
 .metronome .ico{font-size:16px}
 .nav-toggle .ico{font-size:18px}
 .shell.nav-collapsed .nav-toggle .ico{transform:rotate(180deg)}
-.track-icon{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:15px;background:#3a3a3a;color:#f5f5f5}
-.track-icon.keys{background:#3a3a3a;color:#f5f5f5}
-.track-icon.drums{background:#1a1a1a;color:#f5f5f5}
-.track-icon.chords{background:#1a1a1a;color:#f5f5f5}
-.track-icon.vocals{background:#3a3a3a;color:#f5f5f5}
+svg.ico.track-icon{width:16px;height:16px;display:inline-block;background:transparent;border-radius:0;color:#f5f5f5}
+svg.ico.track-icon.keys,
+svg.ico.track-icon.drums,
+svg.ico.track-icon.chords,
+svg.ico.track-icon.vocals{background:transparent;color:#f5f5f5}
 .preview-icon{font-size:14px;color:#f5f5f5}
 .upload-icon{font-size:14px;color:#919191}
 .vocal-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:7px;background:#3a3a3a;color:#e6e6e6;font-size:16px}

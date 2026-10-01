@@ -89,3 +89,4 @@ export function drawFlWaveform(canvas, audioBuffer, { strokeColor = '#ff851b', f
     ctx.fillRect(i, yTop, 1, Math.max(2, yBottom - yTop));
   }
 }
+

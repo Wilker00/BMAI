@@ -13,8 +13,6 @@ import './home-portfolio.css';
 import './fl-studio.css';
 import './ui-system.css';
 import { FL_PLUGINS, renderFlPluginWindow, findPluginDef } from './fl-plugins.js';
-import { renderFlChannelRack } from './fl-channel-rack.js';
-import { renderFlMixer } from './fl-mixer.js';
 import { renderFlTopMenuBar, renderFlSessionControls } from './fl-top-panel.js';
 import { renderFlBrowser, drawFlWaveform } from './fl-browser.js';
 import { renderFlPianoRollTools, renderFlVelocityDrawer, renderGhostNotesMarkup } from './fl-piano-roll.js';
@@ -466,7 +464,7 @@ const defaultDrums = () => ({
 });
 
 function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));}
-const trackIconName = { keys:'music_note', drums:'album', chords:'piano', vocals:'mic' };
+const trackIconName = { keys:'music_note', drums:'drums', chords:'piano', vocals:'mic' };
 function loadProject(){try{return JSON.parse(localStorage.getItem('bmai-project'))}catch{return null}}
 const saved = loadProject();
 
@@ -1230,16 +1228,18 @@ function initVisualizer(){
 
     const userTracks = state.tracks || defaultTracks();
     for(const track of userTracks){
-      const meterEl = document.querySelector(`#meter-${track.id}`);
-      const clipEl = document.querySelector(`#meter-${track.id}-clip`);
-      if(!meterEl) continue;
+      const meters = document.querySelectorAll(`[data-level-meter="${track.id}"]`);
+      if(!meters.length) continue;
       const isMuted = !!state.mix[track.id]?.mute;
       const vol = state.mix[track.id]?.vol ?? 0.75;
       const trackPeak = isMuted ? 0 : Math.min(1.2, masterPeak * vol * 1.15);
-      meterEl.style.width = `${Math.min(100, Math.round(trackPeak * 100))}%`;
-      if(clipEl && trackPeak >= 0.999){
-        clipEl.classList.add('clipping');
-        setTimeout(() => clipEl?.classList.remove('clipping'), 800);
+      const width = `${Math.min(100, Math.round(trackPeak * 100))}%`;
+      meters.forEach(meterEl => { meterEl.style.width = width; });
+      if(trackPeak >= 0.999){
+        document.querySelectorAll(`[data-level-clip="${track.id}"]`).forEach(clipEl => {
+          clipEl.classList.add('clipping');
+          setTimeout(() => clipEl?.classList.remove('clipping'), 800);
+        });
       }
     }
   }
@@ -1249,8 +1249,7 @@ function initVisualizer(){
     if(masterMeter) masterMeter.style.width = '0%';
     const userTracks = state.tracks || defaultTracks();
     for(const track of userTracks){
-      const meterEl = document.querySelector(`#meter-${track.id}`);
-      if(meterEl) meterEl.style.width = '0%';
+      document.querySelectorAll(`[data-level-meter="${track.id}"]`).forEach(meterEl => { meterEl.style.width = '0%'; });
     }
   }
 
@@ -1460,6 +1459,7 @@ function playSampleBuffer(buf, volume = 0.75, isDrum = false, playbackRate = 1.0
   }
 }
 let catalog = null;
+let catalogLoad = null;
 let packId = 'featured';
 let groupId = 'picks';
 let query = '';
@@ -3562,7 +3562,8 @@ const studioUi = {
     ? (localStorage.getItem('bmai-studio-mode') || 'arrange') !== 'drums'
     : localStorage.getItem('bmai-studio-dock-collapsed') === '1',
   dockBack: null,
-  patternQuery: ''
+  patternQuery: '',
+  patternKind: 'all'
 };
 const studioRouteModes={melody:'melody',drums:'drums',chords:'chords',vocals:'vocals',mix:'mixer'};
 function persistStudioChrome(){
@@ -3602,6 +3603,12 @@ function activePatternLabel(){
   const pattern = findPattern(state.patterns, kind, state.activePatternIds?.[kind]);
   return pattern?.name || track?.name || '';
 }
+function ensureMixerDockHeight(){
+  if(studioUi.dockHeight < 480) studioUi.dockHeight = 480;
+}
+function ensureRackDockHeight(){
+  if(studioUi.dockHeight < 400) studioUi.dockHeight = 400;
+}
 function setStudioMode(mode){
   if(!state.committed) ensureCommittedProject();
   const modes={
@@ -3624,11 +3631,15 @@ function setStudioMode(mode){
     studioUi.dockCollapsed=false;
     if(studioUi.dockHeight<320) studioUi.dockHeight=320;
   }
-  if(studioUi.mode==='drums') studioUi.inspectorOpen=false;
+  if(studioUi.mode==='drums'){
+    studioUi.inspectorOpen=false;
+    ensureRackDockHeight();
+  }
   if(studioUi.mode==='mixer'){
     studioUi.inspectorOpen=true;
     studioUi.inspectorDismissed=false;
     studioUi.inspectorTab='mix';
+    ensureMixerDockHeight();
   }
   persistStudioChrome();
   state.view='studio';
@@ -3672,6 +3683,7 @@ function openTrackEditor(trackId){
   else if(studioUi.mode==='drums') studioUi.mode='arrange';
   studioUi.dockCollapsed=false;
   if(studioUi.dockHeight<320) studioUi.dockHeight=320;
+  if(next.bottom==='rack' && next.slot==='drums') ensureRackDockHeight();
   studioUi.inspectorOpen=true;
   studioUi.inspectorDismissed=false;
   studioUi.inspectorTab=next.bottom==='mixer'?'mix':'clip';
@@ -3816,6 +3828,10 @@ function bindStudioDock(){
       document.querySelectorAll('[data-pattern-row]').forEach(row=>{
         const name=(row.dataset.patternName||'').toLowerCase();
         row.hidden=!!q&&!name.includes(q);
+      });
+      document.querySelectorAll('.pattern-group').forEach(group=>{
+        const rows=[...group.querySelectorAll('[data-pattern-row]')];
+        if(rows.length) group.hidden=rows.every(row=>row.hidden);
       });
     });
   }
@@ -4137,7 +4153,7 @@ app.innerHTML=`
         <button class="tool" data-view="home">${icon('folder')}<span>Projects</span><small>home</small></button>
         <button class="tool" data-view="studio">${icon('dashboard')}<span>Studio</span><small>all-in-one</small></button>
         <button class="tool" data-view="melody">${icon('music_note')}<span>Melody</span></button>
-        <button class="tool" data-view="drums">${icon('album')}<span>Drums</span></button>
+        <button class="tool" data-view="drums">${icon('drums')}<span>Drums</span></button>
         <button class="tool" data-view="chords">${icon('piano')}<span>Chords</span></button>
         <button class="tool" data-view="vocals">${icon('mic')}<span>Vocals</span></button>
         <button class="tool" data-view="mix">${icon('equalizer')}<span>Mixer</span></button>
@@ -4311,23 +4327,36 @@ function nextEmptyLane(){
 function patternSourceList(){
   ensureDawState(state);
   const q=(studioUi.patternQuery||'').trim().toLowerCase();
+  const filter=studioUi.patternKind||'all';
   const kinds=[['drums','Drums'],['melody','Melody'],['bass','Bass'],['chords','Chords']];
-  const groups=kinds.map(([kind,label])=>{
+  const filters=`<div class="studio-chip-grid">${[['all','All'],...kinds].map(([id,label])=>
+    `<button type="button" class="page-btn ${filter===id?'hot':''}" data-pattern-kind="${id}">${label}</button>`
+  ).join('')}</div>`;
+  const groups=kinds.filter(([kind])=>filter==='all'||filter===kind).map(([kind,label])=>{
     const all=state.patterns?.[kind]||[];
     const list=all.filter(p=>!q||String(p.name||'').toLowerCase().includes(q));
-    if(!list.length&&q) return '';
+    if(!list.length){
+      if(filter==='all') return '';
+      return `<div class="pattern-group"><p class="studio-empty">None yet</p></div>`;
+    }
     const active=state.activePatternIds?.[kind];
     const rows=list.map(p=>`<div class="pattern-row ${p.id===active?'on':''}" data-pattern-row data-pattern-name="${esc(p.name)}">
         <button type="button" class="pattern-row-main" data-pattern-select="${kind}" data-pattern-id="${p.id}">
           <strong>${esc(p.name)}</strong>
           <span>${p.bars} bar${Number(p.bars)===1?'':'s'}</span>
         </button>
-        ${menuPop('⋯', `<button type="button" data-pattern-dup="${kind}">Duplicate</button><button type="button" data-pattern-unique="${kind}">Make unique</button>`, { summaryClass:'pattern-row-menu', className:'studio-menu', label:'Pattern actions' })}
       </div>`).join('');
-    return `<div class="pattern-group"><div class="studio-section-label">${label}</div>${rows||'<p class="studio-empty">None yet</p>'}</div>`;
+    const heading=filter==='all'?`<div class="studio-section-label">${label}</div>`:'';
+    return `<div class="pattern-group">${heading}${rows}</div>`;
   }).join('');
-  const create=menuPop('New pattern', `<button type="button" data-pattern-new="drums">Drums</button><button type="button" data-pattern-new="melody">Melody</button><button type="button" data-pattern-new="bass">Bass</button><button type="button" data-pattern-new="chords">Chords</button>`, { className:'studio-menu studio-new-pattern', summaryClass:'studio-tool-btn primary' });
-  return `<label class="studio-search">Search patterns<input type="search" data-pattern-search value="${esc(studioUi.patternQuery||'')}" placeholder="Name" aria-label="Search patterns"></label>${create}${groups}`;
+  const focus= (state.tracks||[]).find(t=>t.id===studioUi.focusTrack);
+  const actionKind=filter==='all'?(patternKindForTrack(focus)||'drums'):filter;
+  const actions=`<div class="studio-chip-grid">
+      <button type="button" class="page-btn" data-pattern-new="${actionKind}">New</button>
+      <button type="button" class="page-btn" data-pattern-dup="${actionKind}">Duplicate</button>
+      <button type="button" class="page-btn" data-pattern-unique="${actionKind}">Make unique</button>
+    </div>`;
+  return `<div class="studio-search"><input type="search" data-pattern-search value="${esc(studioUi.patternQuery||'')}" placeholder="Search patterns" aria-label="Search patterns"></div>${filters}${actions}${groups}`;
 }
 function patternBankBar(kind){
   ensureDawState(state);
@@ -4715,6 +4744,34 @@ function renderStarterGallery(){
   </section>`;
 }
 
+function studioSoundBrowser(){
+  const kits = `<div class="studio-section-label">Drum kits</div>
+    <div class="studio-chip-grid">${Object.entries(sessionKits).map(([id, kit]) =>
+      `<button type="button" class="studio-chip ${state.kit===id?'on':''}" data-kit="${id}"><strong>${esc(kitNames[id]||id)}</strong><small>${esc(kit.blurb||'')}</small></button>`
+    ).join('')}</div>`;
+  if(!catalog?.packs?.length){
+    return `${kits}
+      <div class="studio-section-label">Installed sounds</div>
+      <button type="button" class="page-btn" data-studio-load-sounds>Show installed sounds</button>`;
+  }
+  const pack = currentPack();
+  const group = currentGroup();
+  const sounds = visibleSounds();
+  const packs = catalog.packs.map(item =>
+    `<button type="button" class="page-btn ${item.id===pack.id?'hot':''}" data-studio-pack="${esc(item.id)}">${esc(item.name)}</button>`
+  ).join('');
+  const groups = (pack.groups || []).map(item =>
+    `<button type="button" class="page-btn ${!query && item.id===group.id?'hot':''}" data-studio-group="${esc(item.id)}">${esc(item.name)}</button>`
+  ).join('');
+  const rows = sounds.map(sound =>
+    `<button type="button" class="sound-preview" data-url="${esc(sound.url)}" data-name="${esc(sound.name)}"><span class="sound-copy"><strong>${esc(sound.name)}</strong></span></button>`
+  ).join('') || '<p class="studio-empty">No sounds in this group.</p>';
+  return `${kits}
+    <div class="studio-section-label">Installed sounds</div>
+    <div class="studio-chip-grid">${packs}</div>
+    <div class="studio-chip-grid">${groups}</div>
+    <div class="studio-sound-list">${rows}</div>`;
+}
 function studioBrowserPane(){
   const tab = studioUi.browserTab;
   const plugins = [
@@ -4745,13 +4802,7 @@ function studioBrowserPane(){
   } else if(tab === 'patterns'){
     body = patternSourceList();
   } else {
-    body = `<div class="studio-section-label">Drum kits</div>
-      <div class="studio-chip-grid">${Object.entries(sessionKits).map(([id, kit]) =>
-        `<button type="button" class="studio-chip ${state.kit===id?'on':''}" data-kit="${id}"><strong>${esc(kitNames[id]||id)}</strong><small>${esc(kit.blurb||'')}</small></button>`
-      ).join('')}</div>
-      <div class="studio-section-label">Library</div>
-      <button type="button" class="studio-tool-btn" data-open="library">Open sound library</button>
-      <p class="studio-empty">Browse packs, assign kicks/hats, and preview one-shots without leaving Studio.</p>`;
+    body = studioSoundBrowser();
   }
   return `<aside class="studio-pane studio-browser-pane">
     <div class="studio-pane-head"><strong>Browser</strong><button type="button" class="studio-tool-btn" data-browser-toggle="closed" data-tip="Hide browser" aria-label="Hide browser">Hide</button></div>
@@ -4772,50 +4823,36 @@ function studioFocusTrackName(){
 }
 
 function studioTrackMix(trackId, track){
-  const mix = state.mix[trackId] || { vol: 0.8, pan: 0, mute: false, solo: false };
-  const vol = Math.round((mix.vol ?? 0.8) * 100);
-  const pan = Math.round((mix.pan ?? 0) * 100);
   const isVocalTrack = trackId === 'vocals' || track.kind === 'vocals' || track.kind === 'audio';
   const keyRoot = String(state.key || 'A').split(' ')[0];
   return `${melodicTrack(track) ? instrumentPatchMarkup(trackId, { locked: true }) : ''}
     <div class="studio-section-label">Channel</div>
-    <div class="studio-knob-row">
-      <div class="studio-knob">
-        <label>Volume</label>
-        <input type="range" min="0" max="100" value="${vol}" data-vol="${trackId}" class="mini-slider studio-slider">
-        <b>${vol}%</b>
-      </div>
-      <div class="studio-knob">
-        <label>Pan</label>
-        <input type="range" min="-100" max="100" value="${pan}" data-pan="${trackId}" class="mini-slider studio-slider">
-        <b>${panText(pan)}</b>
-      </div>
+    <div class="mixer-page studio-inspector-mix">
+      <div class="mix-console">${channelStrip(trackId, track.name || trackId, { meterKey: `${trackId}-inspector` })}</div>
     </div>
     <div class="studio-chip-grid">
-      <button type="button" class="studio-chip ${mix.mute?'on':''}" data-mute="${trackId}">Mute</button>
-      <button type="button" class="studio-chip ${mix.solo?'on':''}" data-solo="${trackId}">Solo</button>
-      <button type="button" class="studio-tool-btn" data-studio-bottom="mixer" data-studio-focus="${esc(trackId)}">Open mixer</button>
+      <button type="button" class="page-btn" data-studio-bottom="mixer" data-studio-focus="${esc(trackId)}">Open mixer</button>
     </div>
     <div class="studio-section-label">Inserts</div>
     <div class="track-fx-list" id="track-fx-list">${renderTrackFxList(trackId)}</div>
     <div class="studio-chip-grid">
-      <button type="button" class="studio-tool-btn" data-track-fx-add="eq" data-fx-track-id="${esc(trackId)}">EQ</button>
-      <button type="button" class="studio-tool-btn" data-track-fx-add="compress" data-fx-track-id="${esc(trackId)}">Comp</button>
-      <button type="button" class="studio-tool-btn" data-track-fx-add="saturator" data-fx-track-id="${esc(trackId)}">Sat</button>
+      <button type="button" class="page-btn" data-track-fx-add="eq" data-fx-track-id="${esc(trackId)}">EQ</button>
+      <button type="button" class="page-btn" data-track-fx-add="compress" data-fx-track-id="${esc(trackId)}">Comp</button>
+      <button type="button" class="page-btn" data-track-fx-add="saturator" data-fx-track-id="${esc(trackId)}">Sat</button>
     </div>
     ${isVocalTrack ? `<div class="studio-section-label">Vocal</div>
       <p class="studio-empty">${esc(keyRoot)} · ${esc(state.key)}. Pitch correction is not applied in this browser editor.</p>
       <div class="studio-chip-grid">
-        <button type="button" class="studio-tool-btn" id="generate-vocals">New hook</button>
-        <button type="button" class="studio-tool-btn" id="pick-vocal-file">${icon('upload')} Import</button>
-        <button type="button" class="studio-tool-btn" id="record-vocal">Record</button>
-        <button type="button" class="studio-tool-btn" id="stop-vocal">Stop</button>
-        <button type="button" class="studio-tool-btn" id="add-vocal">Use in project</button>
+        <button type="button" class="page-btn" id="generate-vocals">New hook</button>
+        <button type="button" class="page-btn" id="pick-vocal-file">${icon('upload')} Import</button>
+        <button type="button" class="page-btn" id="record-vocal">Record</button>
+        <button type="button" class="page-btn" id="stop-vocal">Stop</button>
+        <button type="button" class="page-btn" id="add-vocal">Use in project</button>
       </div>` : ''}
     ${trackId === 'chords' ? `<div class="studio-section-label">Chords</div>
       <div class="studio-chip-grid">
-        <button type="button" class="studio-tool-btn" id="generate-chords">Regenerate</button>
-        <button type="button" class="studio-tool-btn" id="add-chords">Use in project</button>
+        <button type="button" class="page-btn" id="generate-chords">Regenerate</button>
+        <button type="button" class="page-btn" id="add-chords">Use in project</button>
       </div>
       <p class="studio-empty">${esc(state.chords.name)} · ${esc(state.key)}</p>` : ''}`;
 }
@@ -4842,14 +4879,11 @@ function studioToolsPane(){
 
 function studioDockTitle(){
   if(studioUi.bottom === 'mixer') return 'Mixer';
-  if(studioUi.bottom === 'mixer') return 'FL Mixer & Effects';
   if(studioUi.bottom === 'piano') return 'Piano roll';
   if(studioUi.bottom === 'audio') return 'Audio';
-  if(rackSlot === 'drums' || studioUi.mode === 'drums') return 'Step editor';
-  if(rackSlot === 'drums' || studioUi.mode === 'drums' || studioUi.bottom === 'rack') return 'FL Channel Rack';
   if(rackSlot === 'chords') return 'Chords';
+  if(studioUi.bottom === 'rack' || rackSlot === 'drums' || studioUi.mode === 'drums') return 'Channel rack';
   return 'Editor';
-  return 'FL Channel Rack';
 }
 function studioAudioDockBody(){
   return `<div class="studio-audio-dock">
@@ -4868,27 +4902,15 @@ function studioBottomDock(){
   const pattern = activePatternLabel();
   let body = '';
   if(!collapsed && bottom === 'mixer'){
-    ensureDawState(state);
-    body = renderFlMixer(state, studioUi.focusTrack);
+    body = `<div class="mixer-page studio-mixer-embed">${renderMixerDesk()}</div>`;
   } else if(!collapsed && bottom === 'piano'){
     body = `<div id="studio-piano-host" class="studio-piano-host"></div>`;
   } else if(!collapsed && bottom === 'audio'){
     body = studioAudioDockBody();
+  } else if(!collapsed && rackSlot === 'chords'){
+    body = `<div class="studio-chord-embed">${rackChordBody()}</div>`;
   } else if(!collapsed){
-    ensureDawState(state);
-    const curLanes = getDrumLanes();
-    const totalDrumSteps = barSteps('drums');
-    body = renderFlChannelRack(state, {
-      lanes: curLanes,
-      totalSteps: totalDrumSteps,
-      pulse: pulseSteps(),
-      currentStep: sequenceStep % totalDrumSteps,
-      playing,
-      activeLane: state.activeFlChannel || 'kick',
-      graphMode: state.flGraphMode || 'velocity',
-      isGraphOpen: !!state.isFlGraphOpen,
-      activeSettingsLane: state.activeFlSettingsLane
-    });
+    body = `<div class="studio-rack-embed">${renderDrumRack()}</div>`;
   }
   const back = studioUi.dockBack
     ? `<button type="button" class="studio-tool-btn" data-dock-back>${icon('arrow_back')} Back</button>`
@@ -5021,7 +5043,7 @@ function deskTiles(){
   const tiles = [
     ['studio', 'dashboard', 'Studio', 'Arrange the song'],
     ['melody', 'music_note', 'Melody', 'Piano roll'],
-    ['drums', 'album', 'Drums', 'Step grid'],
+    ['drums', 'drums', 'Drums', 'Step grid'],
     ['chords', 'piano', 'Chords', 'Progression'],
     ['vocals', 'mic', 'Vocals', 'Takes'],
     ['mix', 'equalizer', 'Mixer', 'Levels']
@@ -6356,18 +6378,14 @@ function renderBeatDoctor(analysis){
   </div>`;
 }
 
-function stageDrums(){
+function renderDrumRack(){
   ensureDawState(state);
   const isPunch = state.drumPunch !== false;
   const analysis = beatAnalysisNow();
   const beatMarks = beatMarkSet(analysis);
   const curLanes = getDrumLanes();
   const totalDrumSteps = barSteps('drums');
-  return `<div class="page-stack desk desk-wide">
-    ${backToProject()}
-    ${pageHeader({ kicker:'Channel Rack', title:'Drums', meta:esc(sessionKits[state.kit]?.blurb || 'Step sequencer'), guide:'drums' })}
-    ${miniGuide('drums')}
-    <div class="drum-top-bar">
+  return `<div class="drum-top-bar">
       <div class="kit-row page-kits">${Object.entries(sessionKits).map(([id])=>`<button type="button" data-kit="${id}" class="${state.kit===id?'on':''}">${kitNames[id]}</button>`).join('')}</div>
       <div class="pattern-length drum-length-chips">
         <span>Length</span>
@@ -6443,7 +6461,15 @@ function stageDrums(){
       </div>`;
     }).join('')}</div>
     <div class="take-actions action-bar" aria-label="Drum actions"><span class="action-bar-label">Pattern</span><button class="page-btn" id="add-drum-lane" data-tip="Add extra drum lane">+ Lane</button><button class="page-btn" id="quick-fix-beat-action" data-tip="Repair timing and balance issues">Fix</button><button class="page-btn" id="humanize-drums" data-tip="Add subtle velocity and timing variation">Humanize</button><button class="page-btn" data-open="library" data-tip="Browse installed sounds and kits">Library</button><button class="page-btn hot action-primary" id="add-drums">Use in project</button></div>
-    ${patternBankBar('drums')}
+    ${patternBankBar('drums')}`;
+}
+function stageDrums(){
+  ensureDawState(state);
+  return `<div class="page-stack desk desk-wide">
+    ${backToProject()}
+    ${pageHeader({ kicker:'Channel Rack', title:'Drums', meta:esc(sessionKits[state.kit]?.blurb || 'Step sequencer'), guide:'drums' })}
+    ${miniGuide('drums')}
+    ${renderDrumRack()}
   </div>`;
 }
 
@@ -6673,7 +6699,7 @@ function panText(value){
   const n = Math.round(Number(value) || 0);
   return n > 0 ? `${n}R` : n < 0 ? `${Math.abs(n)}L` : 'C';
 }
-function channelStrip(id, name){
+function channelStrip(id, name, { meterKey } = {}){
   const vol = Math.round((state.mix[id]?.vol ?? 0) * 100);
   const pan = Math.round((state.mix[id]?.pan ?? 0) * 100);
   const muted = !!state.mix[id]?.mute;
@@ -6682,13 +6708,13 @@ function channelStrip(id, name){
   const dim = muted || (anySolo && !solo);
   const track = (state.tracks || []).find(t => t.id === id);
   const fxCount = track?.fx?.length || 0;
-  const meterId = `meter-${id}`;
+  const meterId = `meter-${meterKey || id}`;
   const send = Math.round((state.mix[id]?.send ?? 0) * 100);
   const delaySend = Math.round((state.mix[id]?.delaySend ?? 0) * 100);
   const cue = Math.round((state.mix[id]?.cue ?? 0) * 100);
   return `<div class="channel-strip${dim ? ' is-muted' : ''}" data-channel="${id}">
       <strong>${esc(name)}</strong>
-      <div class="strip-meter" aria-hidden="true"><i id="${meterId}"></i><span class="clip-led" id="${meterId}-clip" title="Clipping"></span></div>
+      <div class="strip-meter" aria-hidden="true"><i id="${meterId}" data-level-meter="${esc(id)}"></i><span class="clip-led" id="${meterId}-clip" data-level-clip="${esc(id)}" title="Clipping"></span></div>
       <div class="strip-pan phrase-swing">
         <div class="pot bipolar compact" style="--t:${((pan + 100) / 200).toFixed(4)}" data-tip="Drag up or down. Double-click for center.">
           <span class="pot-track" aria-hidden="true"></span>
@@ -6966,7 +6992,7 @@ function bindMixerDesk(){
 }
 
 const mixerOpenPanels = new Set();
-function stageMix(){
+function renderMixerDesk(){
   ensureDawState(state);
   syncMixFromTracks();
   const rows = (state.tracks || defaultTracks()).map(t => [t.id, t.name]);
@@ -6974,12 +7000,8 @@ function stageMix(){
   const filterTag = filterVal === 0 ? 'Bypass' : (filterVal < 0 ? `Lowpass ${filterVal}` : `Highpass +${filterVal}`);
   const isLimiterOn = state.masterLimiter !== false;
   const isSidechainOn = state.sidechain !== false;
-  const fxTrack = rows.some(([id]) => id === studioUi.focusTrack) ? studioUi.focusTrack : rows[0]?.[0] || 'keys';
 
-  return `<div class="page-stack mixer-page desk desk-wide">
-    ${pageHeader({ kicker:'Output', title:'Mix', meta:'Master', guide:'mix' })}
-    ${miniGuide('mix')}
-    <div class="mixer-desk">
+  return `<div class="mixer-desk">
     <section class="mixer-channels" aria-label="Mixer channels">
       <div class="mixer-section-head"><h2>Channels</h2><span>${rows.length} tracks</span></div>
       <div class="mix-console">${rows.map(([id,name])=>channelStrip(id,name)).join('')}</div>
@@ -7057,7 +7079,18 @@ function stageMix(){
         </div>`;
       }).join('')}
     </div>
-    </section>
+    </section>`;
+}
+function stageMix(){
+  ensureDawState(state);
+  syncMixFromTracks();
+  const rows = (state.tracks || defaultTracks()).map(t => [t.id, t.name]);
+  const fxTrack = rows.some(([id]) => id === studioUi.focusTrack) ? studioUi.focusTrack : rows[0]?.[0] || 'keys';
+
+  return `<div class="page-stack mixer-page desk desk-wide">
+    ${pageHeader({ kicker:'Output', title:'Mix', meta:'Master', guide:'mix' })}
+    ${miniGuide('mix')}
+    ${renderMixerDesk()}
     <details class="mixer-section" data-mixer-panel="monitoring">
     <summary>Reference &amp; monitoring</summary>
     <div class="ref-cue-row">
@@ -7813,7 +7846,7 @@ function scrollPianoToNotes(){
 
 let rackOpen=false;
 let rackSlot='drums';
-const rackIcon={melody:'music_note',drums:'album',chords:'piano',vocals:'mic'};
+const rackIcon={melody:'music_note',drums:'drums',chords:'piano',vocals:'mic'};
 const rackLabel={melody:'Melody',drums:'Drums',chords:'Chords',vocals:'Vocals'};
 const rackLaneMark={kick:'Kick',snare:'Snare',clap:'Clap',hat:'Hat',openhat:'Open Hat',bass:'Bass'};
 function pagePart(){
@@ -10474,6 +10507,19 @@ function closeLibrary(){
   paintLibraryPlayer(document.querySelector('.sound-preview.is-active')?.dataset.name || 'No preview', false);
   paintLibraryAssign();
 }
+function ensureSoundCatalog(){
+  if(catalog) return Promise.resolve(catalog);
+  if(!catalogLoad){
+    catalogLoad = fetch(publicUrl('/sounds/catalog.json')).then(response => response.json()).then(data => {
+      catalog = data;
+      return catalog;
+    }).catch(error => {
+      catalogLoad = null;
+      throw error;
+    });
+  }
+  return catalogLoad;
+}
 async function openLibrary({ assignLane = undefined } = {}){
   if(assignLane !== undefined) activePickingLane = lanes.includes(assignLane) ? assignLane : null;
   const modal=document.querySelector('#library-modal');
@@ -10482,8 +10528,13 @@ async function openLibrary({ assignLane = undefined } = {}){
   paintLibraryAudition();
   if(catalog){renderLibrary();return}
   document.querySelector('#sound-groups').innerHTML='<p class="empty-sounds">Loading library…</p>';
-  catalog=await fetch(publicUrl('/sounds/catalog.json')).then(response=>response.json());
-  renderLibrary();
+  try {
+    await ensureSoundCatalog();
+    renderLibrary();
+  } catch {
+    const groups = document.querySelector('#sound-groups');
+    if(groups) groups.innerHTML = '<p class="empty-sounds">Could not load sounds.</p>';
+  }
 }
 function normalizeVocalRec(rec){
   const bars = Number(rec?.bars);
@@ -11014,6 +11065,7 @@ function onAction(target, event){
       studioUi.bottom = 'rack';
       studioUi.dockCollapsed = false;
       rackSlot = 'drums';
+      ensureRackDockHeight();
     } else if(v === 'piano'){
       studioUi.mode = 'melody';
       studioUi.bottom = 'piano';
@@ -11024,6 +11076,7 @@ function onAction(target, event){
       studioUi.dockCollapsed = false;
       studioUi.inspectorOpen = true;
       studioUi.inspectorTab = 'mix';
+      ensureMixerDockHeight();
     }
     persistStudioChrome();
     renderApp();
@@ -11340,6 +11393,41 @@ function onAction(target, event){
     else notify('Select a clip on the song first');
     return true;
   }
+  const loadSounds = el('[data-studio-load-sounds]');
+  if(loadSounds){
+    ensureSoundCatalog().then(() => renderApp()).catch(() => notify('Could not load the sound library'));
+    return true;
+  }
+  const studioPack = el('[data-studio-pack]');
+  if(studioPack && catalog){
+    packId = studioPack.dataset.studioPack;
+    groupId = currentPack().groups[0]?.id || groupId;
+    query = '';
+    const search = document.querySelector('#library-search');
+    if(search) search.value = '';
+    renderApp();
+    if(document.querySelector('#library-modal') && !document.querySelector('#library-modal').hidden) renderLibrary();
+    return true;
+  }
+  const studioGroup = el('[data-studio-group]');
+  if(studioGroup && catalog){
+    groupId = studioGroup.dataset.studioGroup;
+    query = '';
+    const search = document.querySelector('#library-search');
+    if(search) search.value = '';
+    renderApp();
+    if(document.querySelector('#library-modal') && !document.querySelector('#library-modal').hidden) renderLibrary();
+    return true;
+  }
+  const studioPreview = el('.studio-browser-pane .sound-preview');
+  if(studioPreview){
+    if(activePickingLane && lanes.includes(activePickingLane)){
+      loadLibrarySample(activePickingLane, { url: studioPreview.dataset.url, name: studioPreview.dataset.name || 'Library sound' });
+    } else {
+      playPreview(studioPreview);
+    }
+    return true;
+  }
   const studioTab = el('[data-studio-tab]');
   if(studioTab){
     studioUi.browserTab = studioTab.dataset.studioTab;
@@ -11368,6 +11456,7 @@ function onAction(target, event){
     if(studioUi.bottom === 'mixer'){
       studioUi.inspectorOpen = true;
       studioUi.inspectorTab = 'mix';
+      ensureMixerDockHeight();
     }
     persistStudioChrome();
     renderApp();
@@ -12100,6 +12189,12 @@ function onAction(target, event){
     saveProject();
     renderApp();
     notify(state.songMode ? 'Song Mode enabled — playlist playback' : 'Loop Mode — active pattern');
+    return true;
+  }
+  const patternKind = el('[data-pattern-kind]');
+  if(patternKind){
+    studioUi.patternKind = patternKind.dataset.patternKind || 'all';
+    renderApp();
     return true;
   }
   const patternSelect = el('[data-pattern-select]');
@@ -14062,8 +14157,11 @@ function bindFlStudioInteractions(){
         studioUi.mode = 'arrange';
       } else if(v === 'rack'){
         setView('studio');
+        studioUi.mode = 'drums';
         studioUi.bottom = 'rack';
         studioUi.dockCollapsed = false;
+        rackSlot = 'drums';
+        ensureRackDockHeight();
       } else if(v === 'piano'){
         setView('studio');
         studioUi.bottom = 'piano';

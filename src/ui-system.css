@@ -461,17 +461,18 @@
 .main-stage .coach-btn.primary,
 .main-stage .add-project,
 .main-stage .prompt > button,
-.studio-page .studio-tool-btn.primary {
+.main-stage .pattern-chip.on,
+.studio-page .studio-tool-btn.primary,
+.studio-page .studio-tool-btn.on {
   background: var(--action);
   color: var(--action-ink);
+  box-shadow: none;
 }
 
 .main-stage .chip.selected,
 .main-stage .chip.on,
 .main-stage .kit-row > button.on,
-.main-stage .pattern-chip.on,
-.main-stage .patch-bank > button.on,
-.studio-page .studio-tool-btn.on {
+.main-stage .patch-bank > button.on {
   background: #3a3a3a;
   color: #f5f5f5;
   box-shadow: inset 2px 0 0 #f5f5f5;
@@ -580,9 +581,9 @@
 }
 
 .studio-page .studio-tab.on {
-  background: #3a3a3a;
-  color: #f5f5f5;
-  box-shadow: inset 2px 0 0 #f5f5f5;
+  background: var(--action);
+  color: var(--action-ink);
+  box-shadow: none;
 }
 
 .studio-page .fl-picker-add-btn {
@@ -647,9 +648,9 @@
 }
 
 .studio-page .fl-picker-tab.active {
-  background: #3a3a3a;
-  color: #f5f5f5;
-  box-shadow: inset 2px 0 0 #f5f5f5;
+  background: var(--action);
+  color: var(--action-ink);
+  box-shadow: none;
 }
 
 .studio-page .fl-picker-add-btn {
@@ -665,9 +666,9 @@
 }
 
 .studio-page .fl-picker-list .fl-picker-item.selected {
-  background: #3a3a3a;
-  color: #f5f5f5;
-  box-shadow: inset 2px 0 0 #f5f5f5;
+  background: var(--action);
+  color: var(--action-ink);
+  box-shadow: none;
 }
 
 .main-stage .studio-page .fl-picker-input,

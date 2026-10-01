@@ -43,7 +43,6 @@ export function renderFlPickerPanel(state, {
           AUDIO (${audioTakes.length})
         </button>
       </div>
-      <button type="button" class="fl-picker-add-btn" id="fl-picker-new-pat" title="Create new pattern (F4)">+ PAT</button>
     </div>
 
     <!-- Search filter bar -->
@@ -55,11 +54,13 @@ export function renderFlPickerPanel(state, {
     <div class="fl-picker-list">
       ${activeTab === 'patterns' ? (
         filteredPatterns.length ? filteredPatterns.map(pat => {
-          const isSelected = pat.id === (activePatternId || state.activePatternIds?.[pat.kind]);
+          const isSelected = pat.id === state.activePatternIds?.[pat.kind];
+          const kindLabel = pat.kind === 'drums' ? 'Drums' : pat.kind === 'melody' ? 'Melody' : pat.kind === 'bass' ? 'Bass' : 'Chords';
+          const bars = Number(pat.bars) || 1;
           return `<button type="button" class="fl-picker-item ${isSelected ? 'selected' : ''}" data-picker-pattern-id="${pat.id}" data-picker-kind="${pat.kind}" title="Click to stamp ${pat.label} onto playlist">
-            <span class="fl-picker-color-tag" style="background: ${pat.color}"></span>
+            <span class="fl-picker-item-kind">${kindLabel}</span>
             <span class="fl-picker-item-name">${pat.label}</span>
-            <span class="fl-picker-bars">${pat.bars || 1}B</span>
+            <span class="fl-picker-bars">${bars} bar${bars === 1 ? '' : 's'}</span>
           </button>`;
         }).join('') : `<div class="fl-picker-empty">No patterns found</div>`
       ) : (
@@ -75,9 +76,11 @@ export function renderFlPickerPanel(state, {
 
     <!-- Footer Quick Actions -->
     <div class="fl-picker-footer">
-      <button type="button" class="fl-picker-action-btn" id="fl-picker-clone-pat" title="Clone current pattern">CLONE</button>
-      <button type="button" class="fl-picker-action-btn" id="fl-picker-split-pat" title="Split pattern by channel">SPLIT</button>
-      <button type="button" class="fl-picker-action-btn" id="fl-picker-rename-pat" title="Rename active pattern">RENAME</button>
+      <button type="button" class="fl-picker-action-btn" id="fl-picker-new-pat" title="Create new pattern">New</button>
+      <button type="button" class="fl-picker-action-btn" id="fl-picker-clone-pat" title="Duplicate the active pattern">Duplicate</button>
+      <button type="button" class="fl-picker-action-btn" id="fl-picker-split-pat" title="Split pattern by channel">Split</button>
+      <button type="button" class="fl-picker-action-btn" id="fl-picker-rename-pat" title="Rename active pattern">Rename</button>
     </div>
   </aside>`;
 }
+
